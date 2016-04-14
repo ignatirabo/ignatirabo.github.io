@@ -4,11 +4,34 @@
     <title>Ignacio Tiraboschi</title>
     <description>Simple blog. No tengo idea de que podría poner. Tal vez algo, tal vez muera aquí.
 </description>
-    <link>http://yourdomain.com/</link>
-    <atom:link href="http://yourdomain.com/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 13 Apr 2016 22:08:25 -0300</pubDate>
-    <lastBuildDate>Wed, 13 Apr 2016 22:08:25 -0300</lastBuildDate>
+    <link>/</link>
+    <atom:link href="/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Wed, 13 Apr 2016 23:27:11 -0300</pubDate>
+    <lastBuildDate>Wed, 13 Apr 2016 23:27:11 -0300</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
+    
+      <item>
+        <title>El poder de Jekyll</title>
+        <description>&lt;p&gt;Como dije antes, estoy probando &lt;a href=&quot;https://jekyllrb.com&quot;&gt;Jekyll&lt;/a&gt;.
+Estoy sorprendido por la capacidad de modificación que tiene realizando practicamente ningún cambio.&lt;/p&gt;
+
+&lt;p&gt;Probando un poco, logré con solo 3 lineas, lograr que se pueda leer el post sin entrar al post:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;div&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;post-content&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+    
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/div&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Cuando tenga tiempo haré una inspección más profunda, revelando como hacer la estructura del blog, mi hogar.&lt;/p&gt;
+
+</description>
+        <pubDate>Wed, 13 Apr 2016 23:21:31 -0300</pubDate>
+        <link>/misc/2016/04/13/el-poder-de-jekyll.html</link>
+        <guid isPermaLink="true">/misc/2016/04/13/el-poder-de-jekyll.html</guid>
+        
+        
+        <category>misc</category>
+        
+      </item>
     
       <item>
         <title>Primera publicación!</title>
@@ -30,8 +53,8 @@ El tiempo dirá!&lt;/p&gt;
 
 </description>
         <pubDate>Wed, 13 Apr 2016 21:37:48 -0300</pubDate>
-        <link>http://yourdomain.com/misc/2016/04/13/primera-publicacion.html</link>
-        <guid isPermaLink="true">http://yourdomain.com/misc/2016/04/13/primera-publicacion.html</guid>
+        <link>/misc/2016/04/13/primera-publicacion.html</link>
+        <guid isPermaLink="true">/misc/2016/04/13/primera-publicacion.html</guid>
         
         
         <category>misc</category>
