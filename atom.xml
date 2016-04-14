@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+ <title>Ignacio</title>
+ <link href="http://hyde.getpoole.com/atom.xml" rel="self"/>
+ <link href="http://hyde.getpoole.com/"/>
+ <updated>2016-04-14T00:17:49-03:00</updated>
+ <id>http://hyde.getpoole.com</id>
+ <author>
+   <name>Mark Otto</name>
+   <email></email>
+ </author>
+
+ 
+ <entry>
+   <title>El poder de Jekyll</title>
+   <link href="http://hyde.getpoole.com/misc/2016/04/13/el-poder-de-jekyll/"/>
+   <updated>2016-04-13T23:21:31-03:00</updated>
+   <id>http://hyde.getpoole.com/misc/2016/04/13/el-poder-de-jekyll</id>
+   <content type="html">&lt;p&gt;Como dije antes, estoy probando &lt;a href=&quot;https://jekyllrb.com&quot;&gt;Jekyll&lt;/a&gt;.
+Estoy sorprendido por la capacidad de modificación que tiene realizando practicamente ningún cambio.&lt;/p&gt;
+
+&lt;p&gt;Probando un poco, logré con solo 3 lineas, que se pueda leer el post sin entrar al post:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span class=&quot;lineno&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;lt;div&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;post-content&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;lineno&quot;&gt;2&lt;/span&gt;     { { post.content } } 
+&lt;span class=&quot;lineno&quot;&gt;3&lt;/span&gt;     &lt;span class=&quot;c&quot;&gt;&amp;lt;!-- Agregué espacios entre las llaves --&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;lineno&quot;&gt;4&lt;/span&gt;     &lt;span class=&quot;c&quot;&gt;&amp;lt;!-- para que se pueda renderizar. --&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;lineno&quot;&gt;5&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;lt;/div&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Cuando tenga tiempo haré una inspección más profunda.&lt;/p&gt;
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Primera publicación!</title>
+   <link href="http://hyde.getpoole.com/misc/2016/04/13/primera-publicacion/"/>
+   <updated>2016-04-13T21:37:48-03:00</updated>
+   <id>http://hyde.getpoole.com/misc/2016/04/13/primera-publicacion</id>
+   <content type="html">&lt;p&gt;Estoy probando &lt;a href=&quot;https://jekyllrb.com&quot;&gt;Jekyll&lt;/a&gt;. Por ahora parece lo más “simple”, pero aún manteniendo el control de que esta sucediendo en el sitio. A nadie le debe agradar tener un sitio y no poder saber como funciona.
+No sé que enfoque le voy a dar, si es que le doy un enfoque. Sería interesante.
+El tiempo dirá!&lt;/p&gt;
+
+&lt;p&gt;Voy a hacer un ejemplo de codigo solo por curiosidad sobre Jekyll:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-python&quot; data-lang=&quot;python&quot;&gt;&lt;span class=&quot;lineno&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;say_hi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;lineno&quot;&gt;2&lt;/span&gt;   &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;Hi,&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;
+&lt;span class=&quot;lineno&quot;&gt;3&lt;/span&gt; 
+&lt;span class=&quot;lineno&quot;&gt;4&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;say_hi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;Tom&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;lineno&quot;&gt;5&lt;/span&gt; &lt;span class=&quot;c&quot;&gt;# printea &amp;quot;Hi, Tom&amp;quot; a STDOUT.&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Recomiendo ver &lt;a href=&quot;http://jekyllrb.com/docs/home&quot;&gt;Jekyll docs&lt;/a&gt; por si alguien está interesado. Cubre todo (creo).&lt;/p&gt;
+
+</content>
+ </entry>
+ 
+
+</feed>
