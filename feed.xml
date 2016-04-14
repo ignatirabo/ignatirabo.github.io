@@ -6,8 +6,8 @@
 </description>
     <link>/</link>
     <atom:link href="/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 13 Apr 2016 23:27:11 -0300</pubDate>
-    <lastBuildDate>Wed, 13 Apr 2016 23:27:11 -0300</lastBuildDate>
+    <pubDate>Wed, 13 Apr 2016 23:49:11 -0300</pubDate>
+    <lastBuildDate>Wed, 13 Apr 2016 23:49:11 -0300</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
     
       <item>
@@ -15,13 +15,14 @@
         <description>&lt;p&gt;Como dije antes, estoy probando &lt;a href=&quot;https://jekyllrb.com&quot;&gt;Jekyll&lt;/a&gt;.
 Estoy sorprendido por la capacidad de modificación que tiene realizando practicamente ningún cambio.&lt;/p&gt;
 
-&lt;p&gt;Probando un poco, logré con solo 3 lineas, lograr que se pueda leer el post sin entrar al post:&lt;/p&gt;
+&lt;p&gt;Probando un poco, logré con solo 3 lineas, que se pueda leer el post sin entrar al post:&lt;/p&gt;
 
 &lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;div&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;post-content&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
-    
+    { { post.content } } 
+    &lt;span class=&quot;c&quot;&gt;&amp;lt;!-- Agregué espacios entre las llaves para que se pueda renderizar. --&amp;gt;&lt;/span&gt;
 &lt;span class=&quot;nt&quot;&gt;&amp;lt;/div&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
-&lt;p&gt;Cuando tenga tiempo haré una inspección más profunda, revelando como hacer la estructura del blog, mi hogar.&lt;/p&gt;
+&lt;p&gt;Cuando tenga tiempo haré una inspección más profunda.&lt;/p&gt;
 
 </description>
         <pubDate>Wed, 13 Apr 2016 23:21:31 -0300</pubDate>
