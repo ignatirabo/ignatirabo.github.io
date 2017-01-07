@@ -84,7 +84,7 @@
       <span class="sidebar-nav-item">Currently v2.1.0</span>
     </nav>
 
-    <p>&copy; 2016. All rights reserved.</p>
+    <p>&copy; 2017. All rights reserved.</p>
   </div>
 </div>
 
@@ -98,25 +98,25 @@ Es un lenguaje nuevo, distinto. Con elementos ajenos. Por eso decidí, que lo m�
 
 <p>Se me ocurrió que sería interesante ver un programa que imprima un string <em>s</em>, unas <em>n</em> veces. Sea <em>repeat</em> la función descrita, en <strong>C</strong> la implementamos de la siguiente manera:</p>
 
-<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="lineno"> 1</span> <span class="cm">/* repeat.c */</span>
-<span class="lineno"> 2</span> <span class="cp">#include &lt;stdio.h&gt;</span>
-<span class="lineno"> 3</span> 
-<span class="lineno"> 4</span> <span class="kt">void</span> <span class="nf">repeat</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
-<span class="lineno"> 5</span>     <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
-<span class="lineno"> 6</span>     <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
-<span class="lineno"> 7</span>         <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">s</span><span class="p">);</span>
-<span class="lineno"> 8</span> <span class="p">}</span>
-<span class="lineno"> 9</span> 
-<span class="lineno">10</span> <span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
-<span class="lineno">11</span> <span class="p">{</span>
-<span class="lineno">12</span>     <span class="cm">/* Seteamos las variables de la función */</span>
-<span class="lineno">13</span>     <span class="kt">char</span> <span class="o">*</span><span class="n">s</span> <span class="o">=</span> <span class="s">&quot;hola&quot;</span><span class="p">;</span>
-<span class="lineno">14</span>     <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
-<span class="lineno">15</span> 
-<span class="lineno">16</span>     <span class="cm">/* Corremos la función */</span>
-<span class="lineno">17</span>     <span class="n">repeat</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">n</span><span class="p">);</span>
-<span class="lineno">18</span>     <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-<span class="lineno">19</span> <span class="p">}</span></code></pre></figure>
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span></span><span class="lineno"> 1 </span><span class="cm">/* repeat.c */</span>
+<span class="lineno"> 2 </span><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="lineno"> 3 </span>
+<span class="lineno"> 4 </span><span class="kt">void</span> <span class="nf">repeat</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+<span class="lineno"> 5 </span>    <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+<span class="lineno"> 6 </span>    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="lineno"> 7 </span>        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">s</span><span class="p">);</span>
+<span class="lineno"> 8 </span><span class="p">}</span>
+<span class="lineno"> 9 </span>
+<span class="lineno">10 </span><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="lineno">11 </span><span class="p">{</span>
+<span class="lineno">12 </span>    <span class="cm">/* Seteamos las variables de la función */</span>
+<span class="lineno">13 </span>    <span class="kt">char</span> <span class="o">*</span><span class="n">s</span> <span class="o">=</span> <span class="s">&quot;hola&quot;</span><span class="p">;</span>
+<span class="lineno">14 </span>    <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
+<span class="lineno">15 </span>
+<span class="lineno">16 </span>    <span class="cm">/* Corremos la función */</span>
+<span class="lineno">17 </span>    <span class="n">repeat</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">n</span><span class="p">);</span>
+<span class="lineno">18 </span>    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="lineno">19 </span><span class="p">}</span></code></pre></figure>
 
 <p>El código no es la gran cosa, incluimos la libreria <em>stdio.h</em> para tener la función <em>printf</em> y <em>repeat</em> es simplemente un ciclo con dicho <em>printf</em>.</p>
 
@@ -126,32 +126,32 @@ Es un lenguaje nuevo, distinto. Con elementos ajenos. Por eso decidí, que lo m�
   <li><strong>main.ml</strong>: aquí definimos el main, quien llama a nuestro <em>repeat</em></li>
 </ul>
 
-<figure class="highlight"><pre><code class="language-ocaml" data-lang="ocaml"><span class="lineno">1</span> <span class="k">open</span> <span class="nc">Repeat</span>
-<span class="lineno">2</span> 
-<span class="lineno">3</span> <span class="k">let</span> <span class="o">_</span> <span class="o">=</span> <span class="n">repeat</span> <span class="s2">&quot;hola&quot;</span> <span class="mi">5</span></code></pre></figure>
+<figure class="highlight"><pre><code class="language-ocaml" data-lang="ocaml"><span></span><span class="lineno">1 </span><span class="k">open</span> <span class="nc">Repeat</span>
+<span class="lineno">2 </span>
+<span class="lineno">3 </span><span class="k">let</span> <span class="o">_</span> <span class="o">=</span> <span class="n">repeat</span> <span class="s2">&quot;hola&quot;</span> <span class="mi">5</span></code></pre></figure>
 
 <ul>
   <li><strong>repeat.mli</strong>: la interfaz de <em>repeat</em></li>
 </ul>
 
-<figure class="highlight"><pre><code class="language-ocaml" data-lang="ocaml"><span class="lineno">1</span> <span class="c">(* Solo damos el tipo de la función, el cual puede</span>
-<span class="lineno">2</span> <span class="c"> * ser copiado del interprete de Ocaml</span>
-<span class="lineno">3</span> <span class="c"> *)</span>
-<span class="lineno">4</span> <span class="k">val</span> <span class="n">repeat</span> <span class="o">:</span> <span class="kt">string</span> <span class="o">-&gt;</span> <span class="kt">int</span> <span class="o">-&gt;</span> <span class="kt">string</span> <span class="o">-&gt;</span> <span class="kt">unit</span></code></pre></figure>
+<figure class="highlight"><pre><code class="language-ocaml" data-lang="ocaml"><span></span><span class="lineno">1 </span><span class="c">(* Solo damos el tipo de la función, el cual puede</span>
+<span class="lineno">2 </span><span class="c"> * ser copiado del interprete de Ocaml</span>
+<span class="lineno">3 </span><span class="c"> *)</span>
+<span class="lineno">4 </span><span class="k">val</span> <span class="n">repeat</span> <span class="o">:</span> <span class="kt">string</span> <span class="o">-&gt;</span> <span class="kt">int</span> <span class="o">-&gt;</span> <span class="kt">string</span> <span class="o">-&gt;</span> <span class="kt">unit</span></code></pre></figure>
 
 <ul>
   <li><strong>repeat.ml</strong>: la definición de <em>repeat</em></li>
 </ul>
 
-<figure class="highlight"><pre><code class="language-ocaml" data-lang="ocaml"><span class="lineno">1</span> <span class="k">let</span> <span class="k">rec</span> <span class="n">repeat</span> <span class="n">s</span> <span class="n">n</span> <span class="o">=</span>
-<span class="lineno">2</span>     <span class="k">let</span> <span class="k">open</span> <span class="nc">Printf</span> <span class="k">in</span>
-<span class="lineno">3</span>         <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="k">then</span>
-<span class="lineno">4</span>             <span class="n">printf</span> <span class="s2">&quot;%s</span><span class="se">\n</span><span class="s2">&quot;</span> 
-<span class="lineno">5</span>         <span class="k">else</span> 
-<span class="lineno">6</span>             <span class="k">begin</span>
-<span class="lineno">7</span>                 <span class="n">printf</span> <span class="s2">&quot;%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="n">s</span><span class="o">;</span>
-<span class="lineno">8</span>                 <span class="n">repeat</span> <span class="n">s</span> <span class="o">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="o">)</span>
-<span class="lineno">9</span>             <span class="k">end</span></code></pre></figure>
+<figure class="highlight"><pre><code class="language-ocaml" data-lang="ocaml"><span></span><span class="lineno">1 </span><span class="k">let</span> <span class="k">rec</span> <span class="n">repeat</span> <span class="n">s</span> <span class="n">n</span> <span class="o">=</span>
+<span class="lineno">2 </span>    <span class="k">let</span> <span class="k">open</span> <span class="nc">Printf</span> <span class="k">in</span>
+<span class="lineno">3 </span>        <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="k">then</span>
+<span class="lineno">4 </span>            <span class="n">printf</span> <span class="s2">&quot;%s</span><span class="se">\n</span><span class="s2">&quot;</span> 
+<span class="lineno">5 </span>        <span class="k">else</span> 
+<span class="lineno">6 </span>            <span class="k">begin</span>
+<span class="lineno">7 </span>                <span class="n">printf</span> <span class="s2">&quot;%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="n">s</span><span class="o">;</span>
+<span class="lineno">8 </span>                <span class="n">repeat</span> <span class="n">s</span> <span class="o">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="o">)</span>
+<span class="lineno">9 </span>            <span class="k">end</span></code></pre></figure>
 
 <h3 id="principales-diferencias">Principales diferencias</h3>
 
@@ -163,7 +163,7 @@ Es un lenguaje nuevo, distinto. Con elementos ajenos. Por eso decidí, que lo m�
 
 <p>La tercera diferencia principal es la falta de corchetes,</p>
 
-<figure class="highlight"><pre><code class="language-ocaml" data-lang="ocaml"><span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="k">then</span>
+<figure class="highlight"><pre><code class="language-ocaml" data-lang="ocaml"><span></span><span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="k">then</span>
             <span class="n">printf</span> <span class="s2">&quot;%s</span><span class="se">\n</span><span class="s2">&quot;</span> 
         <span class="k">else</span> 
             <span class="k">begin</span>
@@ -177,10 +177,10 @@ Es un lenguaje nuevo, distinto. Con elementos ajenos. Por eso decidí, que lo m�
 
 <p>Finalmente, vemos que, a diferencia de la mayoría de los lenguajes, no es necesario incluir una libreria en todo el programa, podemos incluirla solo en una función cuando la necesitamos:</p>
 
-<figure class="highlight"><pre><code class="language-ocaml" data-lang="ocaml"><span class="k">let</span> <span class="k">open</span> <span class="nc">Printf</span> <span class="k">in</span>
+<figure class="highlight"><pre><code class="language-ocaml" data-lang="ocaml"><span></span><span class="k">let</span> <span class="k">open</span> <span class="nc">Printf</span> <span class="k">in</span>
     <span class="o">...</span></code></pre></figure>
 
-<h3 id="conclusin">Conclusión</h3>
+<h3 id="conclusión">Conclusión</h3>
 
 <p>Esas diferencias son solo una pequeña parte de la diferencia de Ocaml con C, y más aún de Ocaml con el resto de los lenguajes. Uno podría pasar días analizando este lenguaje, pero por ahora nos conformamos con esto.</p>
 
@@ -191,6 +191,15 @@ Es un lenguaje nuevo, distinto. Con elementos ajenos. Por eso decidí, que lo m�
 <div class="related">
   <h2>Related Posts</h2>
   <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/misc/2017/01/06/c++_simple_examples/">
+            C++ simple example
+            <small>06 Jan 2017</small>
+          </a>
+        </h3>
+      </li>
     
       <li>
         <h3>
