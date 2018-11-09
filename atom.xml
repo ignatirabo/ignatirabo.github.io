@@ -4,7 +4,7 @@
  <title>Ignacio</title>
  <link href="http://hyde.getpoole.com/atom.xml" rel="self"/>
  <link href="http://hyde.getpoole.com/"/>
- <updated>2017-11-25T21:13:46-03:00</updated>
+ <updated>2018-11-09T15:05:11+01:00</updated>
  <id>http://hyde.getpoole.com</id>
  <author>
    <name>Mark Otto</name>
@@ -13,15 +13,115 @@
 
  
  <entry>
+   <title>Implementing a new bind for Mtac2 with telescopes</title>
+   <link href="http://hyde.getpoole.com/misc/2018/10/09/bind-in-mtac/"/>
+   <updated>2018-10-09T16:01:00+02:00</updated>
+   <id>http://hyde.getpoole.com/misc/2018/10/09/bind-in-mtac</id>
+   <content type="html">&lt;p&gt;Because &lt;em&gt;Mtac2&lt;/em&gt; uses monads there is a &lt;code&gt;bind&lt;/code&gt; function that has a type&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-Coq&quot;&gt;bind : forall {A : Type} {B : Type}, M A -&amp;gt; (A -&amp;gt; M B) -&amp;gt; M B.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The &lt;code&gt;bind&lt;/code&gt; operator is used to concatenate different computations. So given &lt;code&gt;M A&lt;/code&gt;, which means we have a proof of &lt;code&gt;A&lt;/code&gt; wrapped in our monad, we want to use this proof of &lt;code&gt;A&lt;/code&gt; to continue to proof &lt;code&gt;M B&lt;/code&gt;, and so it returns &lt;code&gt;M B&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;The &lt;em&gt;problem&lt;/em&gt; that arises from this definition is that this type &lt;em&gt;B&lt;/em&gt; can depend on other types but they have to be already introduced to &lt;em&gt;B&lt;/em&gt;. For example we can’t do the following:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-Coq&quot;&gt;mfix  f a : forall x .. z, M (B x .. z) :=
+  a' &amp;lt;- g a;
+  mmatch a' as a' return forall x .. z, M (B' a' x .. z)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here &lt;code&gt;bind&lt;/code&gt; is hidden, but it would be something like this&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-Coq&quot;&gt;bind (g a) (fun a' =&amp;gt; mmatch a' ...)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;So the type of &lt;code&gt;fun a' =&amp;gt; mmatch a' ...&lt;/code&gt; is &lt;code&gt;forall a' x .. z, M (B' a' x .. z)&lt;/code&gt; which doesn’t match with the type bind is expecting.&lt;/p&gt;
+
+&lt;p&gt;The idea is to migrate this to something like&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-Coq&quot;&gt;mbind : forall {A : Type} {B : X .. Z -&amp;gt; Type}, M A -&amp;gt; (A -&amp;gt; forall x .. z M (B x .. z)) -&amp;gt; M (B x .. z).
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The way I did this is by using &lt;em&gt;telescopes&lt;/em&gt;, or at least that’s what we call them. &lt;em&gt;Telescopes&lt;/em&gt; are actually values of a type &lt;code&gt;MTele&lt;/code&gt;, which is unductively defined as:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-Coq&quot;&gt;Inductive MTele : Type :=
+| mBase : MTele
+| mTele {X : Type} (F : X -&amp;gt; MTele) : MTele
+.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;By using this type we can express an arbitrary amount of values of different types. For example &lt;code&gt;@mTele nat (fun _ =&amp;gt; @mTele bool (fun _ =&amp;gt; mBase))&lt;/code&gt; describes something that needs a natural number and a boolean value. With a telescope and a set of functions we can express this types we’re looking for. In this case, we’re interested in the following notation to write the type of &lt;code&gt;mbind&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-Coq&quot;&gt;Local Notation MFA T := (MTele_val (MTele_C SType SProp M T)).
+mbind {A : Type} {m : MTele} : forall {B : MTele_Ty m}, M A -&amp;gt; (A -&amp;gt; MFA B) -&amp;gt; MFA B.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;em&gt;Telescopes&lt;/em&gt; work at three levels:&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Syntax&lt;/th&gt;
+      &lt;th&gt;Type&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;code&gt;Let m := @mTele nat (fun _ : nat =&amp;gt; mBase)&lt;/code&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;code&gt;m : MTele&lt;/code&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;code&gt;Let A : MTele_Sort SProp m := fun x =&amp;gt; x = x.&lt;/code&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;code&gt;A : nat -&amp;gt; Type&lt;/code&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;code&gt;Let a : MTele_val (MTele_C SProp SProp M A) := ...&lt;/code&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;code&gt;a : forall x : nat, M (C x)&lt;/code&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;At the first level (top) we see the definition of a telescope that takes only a natural number. We use &lt;code&gt;_&lt;/code&gt; because we don’t actually care about the value we take. Now &lt;code&gt;m&lt;/code&gt; has type &lt;code&gt;MTele&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;A&lt;/code&gt; has type &lt;code&gt;MTele_Sort SProp m&lt;/code&gt;. This means that &lt;code&gt;A&lt;/code&gt; is a &lt;code&gt;Prop&lt;/code&gt; that takes a &lt;code&gt;nat&lt;/code&gt;. &lt;code&gt;SProp&lt;/code&gt; is a constructor of &lt;code&gt;Sort&lt;/code&gt; which coerces with &lt;code&gt;Prop&lt;/code&gt;. &lt;code&gt;Sort&lt;/code&gt; means to describe what sort of object we want to produce out of the telescope: it can be a type or a proposition. In this case we’re interested in &lt;code&gt;SProp&lt;/code&gt; because of how &lt;code&gt;A&lt;/code&gt; is defined.&lt;/p&gt;
+
+&lt;p&gt;It’s important to notice that an inhabitant of &lt;code&gt;A&lt;/code&gt; would be a proof of the proposition that it represents. That’s what &lt;code&gt;a&lt;/code&gt; attempts to be. Through those two functions: &lt;code&gt;MTele_val&lt;/code&gt; and &lt;code&gt;MTele_C&lt;/code&gt; we can describe the type of an inhabitant of &lt;code&gt;A&lt;/code&gt;:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;code&gt;MTele_val&lt;/code&gt; computes &lt;code&gt;λ x .. z, T x .. z&lt;/code&gt; from &lt;code&gt;T : MTele_Sort s n&lt;/code&gt;.&lt;/li&gt;
+  &lt;li&gt;&lt;code&gt;MTele_C&lt;/code&gt; maps an &lt;code&gt;MTele_Sort s m&lt;/code&gt; with a constant function, in this case &lt;code&gt;M&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;This is the implentation of &lt;code&gt;mbind&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-Coq&quot;&gt;Fixpoint mbind {m : MTele} {A : Type} : forall {B : MTele_Ty m}, M A -&amp;gt; (A -&amp;gt; MFA B) -&amp;gt; MFA B :=
+  match m with
+  | mBase =&amp;gt; fun B ma f =&amp;gt; @bind A B ma f
+  | @mTele X F =&amp;gt; fun B ma f x =&amp;gt; @mbind (F x) A (B x) ma (fun a =&amp;gt; f a x)
+  end.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The way this works is by induction on the telescope. When the telescope is &lt;code&gt;mBase&lt;/code&gt; we just use the regular &lt;code&gt;bind&lt;/code&gt;, because we don’t have any kind of argument of any type that we want to “add” to &lt;code&gt;B&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;When the telescope is &lt;code&gt;@mTele X F&lt;/code&gt; we just peel one layer of the telescope by each recursive step. Notice the last argument of &lt;code&gt;mbind&lt;/code&gt;, the function, uses the original &lt;code&gt;f&lt;/code&gt; but it adds a value &lt;code&gt;x&lt;/code&gt; of type &lt;code&gt;X&lt;/code&gt;. If &lt;code&gt;m&lt;/code&gt; is a long telescope: &lt;code&gt;m := [tele T1 T2 ... Tn]&lt;/code&gt; this function will grow with each step finally approaching something like &lt;code&gt;fun a =&amp;gt; f a t1 t2 .. tn&lt;/code&gt;, where &lt;code&gt;t1 : T1&lt;/code&gt;, &lt;code&gt;t2 : T2&lt;/code&gt; … &lt;code&gt;tn : Tn&lt;/code&gt;.&lt;/p&gt;
+</content>
+ </entry>
+ 
+ <entry>
    <title>Installing Coq for Spacemacs</title>
-   <link href="http://hyde.getpoole.com/misc/2017/11/25/coq-in-spacemacs/"/>
-   <updated>2017-11-25T20:47:00-03:00</updated>
-   <id>http://hyde.getpoole.com/misc/2017/11/25/coq-in-spacemacs</id>
+   <link href="http://hyde.getpoole.com/misc/2017/11/26/coq-in-spacemacs/"/>
+   <updated>2017-11-26T00:47:00+01:00</updated>
+   <id>http://hyde.getpoole.com/misc/2017/11/26/coq-in-spacemacs</id>
    <content type="html">&lt;p&gt;I had a very hard time getting Coq to work as expected on Spacemacs. I collected everything I found and made this little tutorial.&lt;/p&gt;
 
 &lt;p&gt;First of all we need to install &lt;strong&gt;Coq&lt;/strong&gt;, though &lt;strong&gt;Opam&lt;/strong&gt;. Debian-based users can do this with &lt;code&gt;apt-get&lt;/code&gt;.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code&gt;sudo apt-get install opam 
+opam install coq
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In fedora:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;sudo yum install opam.x86_64
 opam install coq
 &lt;/code&gt;&lt;/pre&gt;
 
@@ -32,32 +132,36 @@ cd ~/.emacs.d/lisp/PG
 make
 &lt;/code&gt;&lt;/pre&gt;
 
+&lt;p&gt;And add this to you dotfile in &lt;code&gt;dotspacemacs/user-init&lt;/code&gt;. This is done with &lt;code&gt;SPC f e d&lt;/code&gt; in &lt;strong&gt;Evil mode&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;(load &quot;~/.emacs.d/lisp/PG/generic/proof-site&quot;)
+&lt;/code&gt;&lt;/pre&gt;
+
 &lt;p&gt;The next step is installing &lt;strong&gt;company-coq&lt;/strong&gt; with &lt;strong&gt;MELPA&lt;/strong&gt;. Luckily, MELPA comes with the default Spacemacs installation. Just use &lt;code&gt;M-x package-refresh-contents RET&lt;/code&gt; followed by &lt;code&gt;M-x package-install RET company-coq RET&lt;/code&gt; to install and byte-compile company-coq and its dependencies (some of them will produce a few warnings; that’s OK).&lt;/p&gt;
 
 &lt;p&gt;Next, we have to download a &lt;a href=&quot;https://github.com/olivierverdier/spacemacs-coq&quot;&gt;Coq layer&lt;/a&gt; for Spacemacs. This will provide all the keybindings and configurations we need to start working.&lt;/p&gt;
 
-&lt;p&gt;Before dowloading the layer we need to change the &lt;code&gt;dotspacemacs-configuration-layer-path&lt;/code&gt; in our &lt;code&gt;.spacemacs&lt;/code&gt; dotfile. Find that line and change it like this:&lt;/p&gt;
+&lt;p&gt;Before dowloading the layer we need to change the &lt;code&gt;dotspacemacs-configuration-layer-path&lt;/code&gt; in our &lt;code&gt;.spacemacs&lt;/code&gt; dotfile. Find that line and change it to this:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code&gt;dotspacemacs-configuration-layer-path '(&quot;~/.spacemacs.d/&quot;)
 &lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This informs Spacemacs that we will keep our configuration layers in this folder, so then Spacemacs knows how to reach them. Now we need to create the directory and clone the layer.&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;
-mkdir ~/.spacemacs.d
+&lt;pre&gt;&lt;code&gt;mkdir ~/.spacemacs.d
 mkdir ~/.spacemacs.d/layers
 cd ~/.spacemacs.d/layers
 git clone https://github.com/olivierverdier/spacemacs-coq.git
 mv spacemacs-coq coq
 &lt;/code&gt;&lt;/pre&gt;
 
+&lt;p&gt;Now add &lt;code&gt;coq&lt;/code&gt; to your &lt;code&gt;dotspacemacs-configuration-layers&lt;/code&gt;.&lt;/p&gt;
+
 &lt;p&gt;We’re almost finished. Let’s go to the location of the layer we’ve just downloaded and open &lt;code&gt;config.el&lt;/code&gt;. We need to change the &lt;code&gt;proof-general-path&lt;/code&gt;:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;(defvar proof-general-path &quot;/home/yourname/.emacs.d/lisp/PG/generic/proof-site&quot;
+&lt;pre&gt;&lt;code&gt;(defvar proof-general-path &quot;~/.emacs.d/lisp/PG/generic/proof-site&quot;
   &quot;The path to proof general&quot;)
 &lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The thing is that this solution is unique to each user, you need to adapt the path to your own setup.&lt;/p&gt;
 
 &lt;p&gt;Finally, the last step (totally optional) will serve &lt;strong&gt;Evil&lt;/strong&gt; users. If this is not configured, everytime you hit &lt;code&gt;&amp;lt;ESC&amp;gt;&lt;/code&gt;, Emacs will autocomplete the current line.&lt;/p&gt;
 
@@ -65,6 +169,11 @@ mv spacemacs-coq coq
 &lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This should be added before Evil loads, that means, before &lt;code&gt;dotspacemacs/user-init&lt;/code&gt; in your &lt;code&gt;.spacemacs&lt;/code&gt; file. This was found &lt;a href=&quot;https://github.com/syl20bnr/spacemacs/issues/8853&quot;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Hopefully, you’ve installed Coq in Spacemacs. In case you’re curious there’s a tutorial included with &lt;strong&gt;Company Coq&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;M-x company-coq-tutorial 
+&lt;/code&gt;&lt;/pre&gt;
 
 </content>
  </entry>
