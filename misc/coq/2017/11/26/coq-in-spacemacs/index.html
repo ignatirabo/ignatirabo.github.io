@@ -15,6 +15,9 @@
     
   </title>
 
+  <!-- Javascript -->
+  <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
   <!-- CSS -->
   <link rel="stylesheet" href="/public/css/poole.css">
   <link rel="stylesheet" href="/public/css/syntax.css">
@@ -81,11 +84,12 @@
       <div class="post">
   <h1 class="post-title">Installing Coq for Spacemacs</h1>
   <span class="post-date">26 Nov 2017</span>
+  <span class="post-edit">09 Oct 2018</span>
   <p>I had a very hard time getting Coq to work as expected on Spacemacs. I collected everything I found and made this little tutorial.</p>
 
 <p>First of all we need to install <strong>Coq</strong>, though <strong>Opam</strong>. Debian-based users can do this with <code>apt-get</code>.</p>
 
-<pre><code>sudo apt-get install opam 
+<pre><code>sudo apt-get install opam
 opam install coq
 </code></pre>
 
@@ -154,9 +158,18 @@ mv spacemacs-coq coq
     
       <li>
         <h3>
-          <a href="/misc/2018/10/09/bind-in-mtac/">
+          <a href="/coq/mtac/2018/11/12/using-mtelein/">
+            Using the MTele_In function
+            <small>12 Nov 2018</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/coq/mtac/2018/11/09/bind-in-mtac/">
             Implementing a new bind for Mtac2 with telescopes
-            <small>09 Oct 2018</small>
+            <small>09 Nov 2018</small>
           </a>
         </h3>
       </li>

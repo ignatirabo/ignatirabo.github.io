@@ -15,6 +15,9 @@
     
   </title>
 
+  <!-- Javascript -->
+  <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
   <!-- CSS -->
   <link rel="stylesheet" href="/public/css/poole.css">
   <link rel="stylesheet" href="/public/css/syntax.css">
@@ -80,7 +83,8 @@
     <div class="content container">
       <div class="post">
   <h1 class="post-title">Implementing a new bind for Mtac2 with telescopes</h1>
-  <span class="post-date">09 Oct 2018</span>
+  <span class="post-date">09 Nov 2018</span>
+  <span class="post-edit"></span>
   <p>Because <em>Mtac2</em> uses monads there is a <code>bind</code> function that has a type</p>
 
 <pre><code class="language-Coq">bind : forall {A : Type} {B : Type}, M A -&gt; (A -&gt; M B) -&gt; M B.
@@ -176,7 +180,16 @@ mbind {A : Type} {m : MTele} : forall {B : MTele_Ty m}, M A -&gt; (A -&gt; MFA B
     
       <li>
         <h3>
-          <a href="/misc/2017/11/26/coq-in-spacemacs/">
+          <a href="/coq/mtac/2018/11/12/using-mtelein/">
+            Using the MTele_In function
+            <small>12 Nov 2018</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/misc/coq/2017/11/26/coq-in-spacemacs/">
             Installing Coq for Spacemacs
             <small>26 Nov 2017</small>
           </a>
