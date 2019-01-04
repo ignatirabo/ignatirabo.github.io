@@ -16,7 +16,14 @@
   </title>
 
   <!-- Javascript -->
-  <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?..."></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
 
   <!-- CSS -->
   <link rel="stylesheet" href="/public/css/poole.css">
@@ -73,13 +80,31 @@
           
         
       
+        
+          
+        
+      
 
       <br>
+
+      <h2 class="sidebar-nav-sub "><a href="/tags/">Tags</a></h2>
+      
+      
+        
+        <a class="badge badge-secondary" href="/tags/?tag=coq">coq</a>
+      
+        
+        <a class="badge badge-secondary" href="/tags/?tag=misc">misc</a>
+      
+        
+        <a class="badge badge-secondary" href="/tags/?tag=mtac">mtac</a>
+      
+      <br>
+      <br>
+
       <span class="sidebar-nav-item">Made with <a href="https://jekyllrb.com/">Jekyll</a> and <a href="http://hyde.getpoole.com/">Hyde</a></span>
       <span class="sidebar-nav-item">Currently v2.1.0</span>
     </nav>
-
-    <p>&copy; 2019. All rights reserved.</p>
   </div>
 </div>
 
@@ -89,7 +114,7 @@
   
   <div class="post">
     <h1 class="post-title">
-      <a href="/coq/mtac/2018/11/12/using-mtelein/">
+      <a href="/2018/11/12/using-mtelein/">
         Using the MTele_In function
       </a>
     </h1>
@@ -144,7 +169,7 @@
   
   <div class="post">
     <h1 class="post-title">
-      <a href="/coq/mtac/2018/11/09/bind-in-mtac/">
+      <a href="/2018/11/09/bind-in-mtac/">
         Implementing a new bind for Mtac2 with telescopes
       </a>
     </h1>
@@ -242,7 +267,7 @@ mbind {A : Type} {m : MTele} : forall {B : MTele_Ty m}, M A -&gt; (A -&gt; MFA B
   
   <div class="post">
     <h1 class="post-title">
-      <a href="/misc/coq/2017/11/26/coq-in-spacemacs/">
+      <a href="/2017/11/26/coq-in-spacemacs/">
         Installing Coq for Spacemacs
       </a>
     </h1>

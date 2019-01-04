@@ -4,7 +4,7 @@
  <title>Ignacio</title>
  <link href="http://hyde.getpoole.com/atom.xml" rel="self"/>
  <link href="http://hyde.getpoole.com/"/>
- <updated>2019-01-04T13:32:25+01:00</updated>
+ <updated>2019-01-04T17:47:31+01:00</updated>
  <id>http://hyde.getpoole.com</id>
  <author>
    <name>Mark Otto</name>
@@ -14,9 +14,9 @@
  
  <entry>
    <title>The other functions</title>
-   <link href="http://hyde.getpoole.com/coq/mtac/2019/01/04/the_other_functions/"/>
+   <link href="http://hyde.getpoole.com/2019/01/04/the_other_functions/"/>
    <updated>2019-01-04T11:44:00+01:00</updated>
-   <id>http://hyde.getpoole.com/coq/mtac/2019/01/04/the_other_functions</id>
+   <id>http://hyde.getpoole.com/2019/01/04/the_other_functions</id>
    <content type="html">&lt;p&gt;There are two functions that complement lift. One of them is &lt;code&gt;lift_in&lt;/code&gt; which basically does the same as &lt;code&gt;lift&lt;/code&gt; but basically wraps the type in a &lt;code&gt;MTele_In&lt;/code&gt; (just like what happens in &lt;code&gt;mbind&lt;/code&gt;. The other function is &lt;code&gt;m_check&lt;/code&gt; which checks if a certain type is &lt;em&gt;under&lt;/em&gt; the monad in the &lt;code&gt;TyTree&lt;/code&gt;. By using &lt;code&gt;m_check&lt;/code&gt; we know if we want to lift the type or just leave it as it is.&lt;/p&gt;
 
 &lt;h2 id=&quot;the-lift_in-function&quot;&gt;The &lt;em&gt;lift_in&lt;/em&gt; function&lt;/h2&gt;
@@ -106,9 +106,9 @@ Definition m_check (T : TyTree) (A : Type) : M bool :=
  
  <entry>
    <title>Setting up the environment for `lift`</title>
-   <link href="http://hyde.getpoole.com/coq/mtac/2019/01/04/setting_up_environment_for_lift/"/>
+   <link href="http://hyde.getpoole.com/2019/01/04/setting_up_environment_for_lift/"/>
    <updated>2019-01-04T11:43:00+01:00</updated>
-   <id>http://hyde.getpoole.com/coq/mtac/2019/01/04/setting_up_environment_for_lift</id>
+   <id>http://hyde.getpoole.com/2019/01/04/setting_up_environment_for_lift</id>
    <content type="html">&lt;p&gt;The final result is a function called &lt;code&gt;lift&lt;/code&gt;. This function takes a telescope &lt;code&gt;m&lt;/code&gt;, a type &lt;code&gt;T&lt;/code&gt; and a function &lt;code&gt;t&lt;/code&gt; of that type &lt;code&gt;T&lt;/code&gt;, and &lt;em&gt;lifts&lt;/em&gt; the function, meaning we get a new function with a more general type.&lt;/p&gt;
 
 &lt;p&gt;The &lt;code&gt;lift&lt;/code&gt; function needs a lot of stuff around it to work. Here I try to explain some of it.&lt;/p&gt;
@@ -202,9 +202,9 @@ Let t : to_ty T := @raise'.
  
  <entry>
    <title>Returning a lifted function type</title>
-   <link href="http://hyde.getpoole.com/coq/mtac/2018/11/12/returning_a_lifted_type/"/>
+   <link href="http://hyde.getpoole.com/2018/11/12/returning_a_lifted_type/"/>
    <updated>2018-11-12T15:47:00+01:00</updated>
-   <id>http://hyde.getpoole.com/coq/mtac/2018/11/12/returning_a_lifted_type</id>
+   <id>http://hyde.getpoole.com/2018/11/12/returning_a_lifted_type</id>
    <content type="html">&lt;p&gt;The main goal of all of this is to be able to adapt a function to telescopes automatically. The first step in this is to be able to get the type of this of this function. To clarify let’s use an example:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code&gt;ret : forall A : Type, A -&amp;gt; M A
@@ -313,9 +313,9 @@ Polymorphic Definition lift_neg (A : Type) (m : MTele) : M Type :=
  
  <entry>
    <title>Implementing mret with curry/uncurry functions</title>
-   <link href="http://hyde.getpoole.com/coq/mtac/2018/11/12/implementing-mret-with-curry/"/>
+   <link href="http://hyde.getpoole.com/2018/11/12/implementing-mret-with-curry/"/>
    <updated>2018-11-12T15:47:00+01:00</updated>
-   <id>http://hyde.getpoole.com/coq/mtac/2018/11/12/implementing-mret-with-curry</id>
+   <id>http://hyde.getpoole.com/2018/11/12/implementing-mret-with-curry</id>
    <content type="html">&lt;p&gt;One of the simplest primitives of &lt;em&gt;Mtac2&lt;/em&gt; is &lt;code&gt;ret : forall A : Type, A -&amp;gt; M A&lt;/code&gt;. Implementing it in the same way as &lt;code&gt;mbind&lt;/code&gt; it’s not hard. Both functions stick to a pattern at the time of “translating” them.&lt;/p&gt;
 
 &lt;p&gt;The type will change to this: &lt;code&gt;mret : forall (m : MTele) (A : MTele_Ty), MTele_val A -&amp;gt; MFA A&lt;/code&gt;. Notice that because now &lt;code&gt;A&lt;/code&gt; is an &lt;code&gt;MTele_Ty&lt;/code&gt;, any appereance of &lt;code&gt;A&lt;/code&gt; is replaced by &lt;code&gt;A : MTele_val m&lt;/code&gt; and any &lt;code&gt;M A&lt;/code&gt; replaced by &lt;code&gt;MFA A&lt;/code&gt;. The implementation looks similar to the one of &lt;code&gt;mbind&lt;/code&gt;:&lt;/p&gt;
@@ -347,9 +347,9 @@ Polymorphic Definition lift_neg (A : Type) (m : MTele) : M Type :=
  
  <entry>
    <title>Using the MTele_In function</title>
-   <link href="http://hyde.getpoole.com/coq/mtac/2018/11/12/using-mtelein/"/>
+   <link href="http://hyde.getpoole.com/2018/11/12/using-mtelein/"/>
    <updated>2018-11-12T15:47:00+01:00</updated>
-   <id>http://hyde.getpoole.com/coq/mtac/2018/11/12/using-mtelein</id>
+   <id>http://hyde.getpoole.com/2018/11/12/using-mtelein</id>
    <content type="html">&lt;p&gt;In the previous post I explained a possible implementation of &lt;code&gt;mbind&lt;/code&gt; which had type:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&quot;language-Coq&quot;&gt;Fixpoint mbind {m : MTele} {A : Type} : forall {B : MTele_Ty m}, M A -&amp;gt; (A -&amp;gt; MFA B) -&amp;gt; MFA B.
@@ -398,9 +398,9 @@ Polymorphic Definition lift_neg (A : Type) (m : MTele) : M Type :=
  
  <entry>
    <title>Implementing a new bind for Mtac2 with telescopes</title>
-   <link href="http://hyde.getpoole.com/coq/mtac/2018/11/09/bind-in-mtac/"/>
+   <link href="http://hyde.getpoole.com/2018/11/09/bind-in-mtac/"/>
    <updated>2018-11-09T15:01:00+01:00</updated>
-   <id>http://hyde.getpoole.com/coq/mtac/2018/11/09/bind-in-mtac</id>
+   <id>http://hyde.getpoole.com/2018/11/09/bind-in-mtac</id>
    <content type="html">&lt;p&gt;Because &lt;em&gt;Mtac2&lt;/em&gt; uses monads there is a &lt;code&gt;bind&lt;/code&gt; function that has a type&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&quot;language-Coq&quot;&gt;bind : forall {A : Type} {B : Type}, M A -&amp;gt; (A -&amp;gt; M B) -&amp;gt; M B.
@@ -492,9 +492,9 @@ mbind {A : Type} {m : MTele} : forall {B : MTele_Ty m}, M A -&amp;gt; (A -&amp;g
  
  <entry>
    <title>Installing Coq for Spacemacs</title>
-   <link href="http://hyde.getpoole.com/misc/coq/2017/11/26/coq-in-spacemacs/"/>
+   <link href="http://hyde.getpoole.com/2017/11/26/coq-in-spacemacs/"/>
    <updated>2017-11-26T00:47:00+01:00</updated>
-   <id>http://hyde.getpoole.com/misc/coq/2017/11/26/coq-in-spacemacs</id>
+   <id>http://hyde.getpoole.com/2017/11/26/coq-in-spacemacs</id>
    <content type="html">&lt;p&gt;I had a very hard time getting Coq to work as expected on Spacemacs. I collected everything I found and made this little tutorial.&lt;/p&gt;
 
 &lt;p&gt;First of all we need to install &lt;strong&gt;Coq&lt;/strong&gt;, though &lt;strong&gt;Opam&lt;/strong&gt;. Debian-based users can do this with &lt;code&gt;apt-get&lt;/code&gt;.&lt;/p&gt;

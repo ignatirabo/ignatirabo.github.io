@@ -59,6 +59,7 @@ html {
   color: rgba(255,255,255,.5);
   background-color: #202020;
 }
+
 @media (min-width: 48em) {
   .sidebar {
     position: fixed;
@@ -69,6 +70,18 @@ html {
     text-align: left;
   }
 }
+
+/* Sidebar headers */
+h2.sidebar-nav-sub {
+  color: #fff;
+  font-weight: lighter;
+  font-size: 1rem;
+}
+
+h2.sidebar-nav-sub.active {
+  font-weight: bold;
+}
+
 
 /* Sidebar links */
 .sidebar a {
