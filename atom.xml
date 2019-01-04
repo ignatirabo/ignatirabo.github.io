@@ -4,13 +4,346 @@
  <title>Ignacio</title>
  <link href="http://hyde.getpoole.com/atom.xml" rel="self"/>
  <link href="http://hyde.getpoole.com/"/>
- <updated>2018-11-12T17:24:37+01:00</updated>
+ <updated>2019-01-04T13:32:25+01:00</updated>
  <id>http://hyde.getpoole.com</id>
  <author>
    <name>Mark Otto</name>
    <email></email>
  </author>
 
+ 
+ <entry>
+   <title>The other functions</title>
+   <link href="http://hyde.getpoole.com/coq/mtac/2019/01/04/the_other_functions/"/>
+   <updated>2019-01-04T11:44:00+01:00</updated>
+   <id>http://hyde.getpoole.com/coq/mtac/2019/01/04/the_other_functions</id>
+   <content type="html">&lt;p&gt;There are two functions that complement lift. One of them is &lt;code&gt;lift_in&lt;/code&gt; which basically does the same as &lt;code&gt;lift&lt;/code&gt; but basically wraps the type in a &lt;code&gt;MTele_In&lt;/code&gt; (just like what happens in &lt;code&gt;mbind&lt;/code&gt;. The other function is &lt;code&gt;m_check&lt;/code&gt; which checks if a certain type is &lt;em&gt;under&lt;/em&gt; the monad in the &lt;code&gt;TyTree&lt;/code&gt;. By using &lt;code&gt;m_check&lt;/code&gt; we know if we want to lift the type or just leave it as it is.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-lift_in-function&quot;&gt;The &lt;em&gt;lift_in&lt;/em&gt; function&lt;/h2&gt;
+
+&lt;p&gt;This function is a &lt;em&gt;mini-lift&lt;/em&gt;. It returns an element of the following type:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Local Notation InF s n := (forall now_ty : forall s0 : Sort, MTele_Sort s0 n -&amp;gt; s0, (forall (s0 : Sort) (T : MTele_Sort s0 n), MTele_val T -&amp;gt; now_ty s0 T) -&amp;gt; s).
+
+Let lift_inR {m} (U : UNCURRY m) (T : TyTree) :=
+  {F : InF SType m &amp;amp; (to_ty T = F (now_ty U) (now_val U))}.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This &lt;code&gt;F&lt;/code&gt; function is like the one seen before in &lt;code&gt;MTele_In&lt;/code&gt;, so then it fits perfectly with &lt;code&gt;uncurry_in&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Whatever &lt;code&gt;T : TyTree&lt;/code&gt; we pass to &lt;code&gt;lift_in&lt;/code&gt; we will recieve a function &lt;code&gt;F (now_ty U) (now_val U)&lt;/code&gt; that corresponds to the tree, where &lt;code&gt;U : UNCURRY m&lt;/code&gt; is the one from &lt;code&gt;lift&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Here is the current implementation:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Definition lift_in {m : MTele} (U : UNCURRY m) (T : TyTree)
+                 (p l : bool) :
+                 M (lift_inR U T) :=
+  (mfix3 f (T : TyTree) (p l : bool) : M (lift_inR U T) :=
+    mmatch T as e return M (lift_inR U e) with
+    | [? (A : MTele_Ty m)] tyTree_base (RETURN A U) =&amp;gt;
+      print &quot;lift_in: base&quot;;;
+      let F : InF SType m := fun nty nval =&amp;gt; nty SType A in
+      let eq_p : to_ty (tyTree_base (RETURN A U)) = F (now_ty U) (now_val U) := eq_refl in
+      ret (existT _ F eq_p)
+    | [? (A : MTele_Ty m)] tyTree_M (RETURN A U) =&amp;gt;
+      print &quot;lift_in: M&quot;;;
+      let F : InF SType m := fun nty nval =&amp;gt; M (nty SType A) in
+      let eq_p : to_ty (tyTree_M (RETURN A U)) = F (now_ty U) (now_val U) := eq_refl in
+      ret (existT _ F eq_p)
+    | [? X Y] tyTree_imp X Y =&amp;gt;
+      print &quot;lift_in: imp&quot;;;
+      ''(existT _ FX pX) &amp;lt;- f X (negb p) true;
+      ''(existT _ FY pY) &amp;lt;- f Y p false;
+      let F : InF SType m := fun nty nval =&amp;gt; (FX nty nval) -&amp;gt; (FY nty nval) in
+      let eq_p : to_ty (tyTree_imp X Y) = F (now_ty U) (now_val U) :=
+        ltac:(simpl in *; rewrite pX, pY; refine eq_refl) in
+      ret (existT _ F eq_p)
+    | [? A] tyTree_base A =&amp;gt;
+      print &quot;lift_in: unlift_in&quot;;;
+      let F : InF SType m := fun nty nval =&amp;gt; A in
+      ret (existT _ F (eq_refl))
+    | _ =&amp;gt; raise UnLiftInCase
+    end) T p l.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The only recursion appears in the implication case. The &lt;code&gt;_&lt;/code&gt; case means to match something strange we don’t expect. The good thing about this is that the exception can be handled and does not break the &lt;em&gt;lifting&lt;/em&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-m_check-function&quot;&gt;The &lt;em&gt;m_check&lt;/em&gt; function&lt;/h2&gt;
+
+&lt;p&gt;This function is pretty simple as it only checks for a certain case, otherwise it returns &lt;code&gt;false&lt;/code&gt;, meaning that the type &lt;code&gt;A&lt;/code&gt; we passed to it is not found under the monad.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;(* Checks if a given type A is found &quot;under M&quot; *)
+(* true iff A is &quot;under M&quot;, false otherwise *)
+Definition m_check (T : TyTree) (A : Type) : M bool :=
+  print &quot;m_check on T:&quot;;;
+  print_term T;;
+  (mfix1 f (T : TyTree) : M bool :=
+  mmatch T return M bool with
+  | [? X] tyTree_base X =&amp;gt; ret false
+  | [? X] tyTree_M X =&amp;gt;
+    mmatch X return M bool with
+    | A =&amp;gt; ret true
+    | _ =&amp;gt; ret false
+    end
+  | [? X Y] tyTree_imp X Y =&amp;gt; fX &amp;lt;- f X;
+                             fY &amp;lt;- f Y;
+                             let r := orb fX fY in
+                             ret r
+  | [? F] tyTree_FAType F =&amp;gt; print_term (F A);;
+                            \nu X : Type,
+                            f (F X)
+  | _ =&amp;gt; ret false
+  end) T.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Knowing if the result is &lt;code&gt;false&lt;/code&gt; or &lt;code&gt;true&lt;/code&gt;, then &lt;code&gt;lift&lt;/code&gt; knows wether to lift if or not. That is for example in the following case:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Let T : TyTree := tyTree_FAType (fun A =&amp;gt; tyTree_FAType (fun B =&amp;gt; tyTree_imp (tyTree_base A) (tyTree_M B))).
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In this type the type &lt;code&gt;tyTree_base A&lt;/code&gt; should remain the same after &lt;code&gt;lift&lt;/code&gt; given the call to &lt;code&gt;m_check&lt;/code&gt; returns &lt;code&gt;false&lt;/code&gt;.&lt;/p&gt;
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Setting up the environment for `lift`</title>
+   <link href="http://hyde.getpoole.com/coq/mtac/2019/01/04/setting_up_environment_for_lift/"/>
+   <updated>2019-01-04T11:43:00+01:00</updated>
+   <id>http://hyde.getpoole.com/coq/mtac/2019/01/04/setting_up_environment_for_lift</id>
+   <content type="html">&lt;p&gt;The final result is a function called &lt;code&gt;lift&lt;/code&gt;. This function takes a telescope &lt;code&gt;m&lt;/code&gt;, a type &lt;code&gt;T&lt;/code&gt; and a function &lt;code&gt;t&lt;/code&gt; of that type &lt;code&gt;T&lt;/code&gt;, and &lt;em&gt;lifts&lt;/em&gt; the function, meaning we get a new function with a more general type.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;lift&lt;/code&gt; function needs a lot of stuff around it to work. Here I try to explain some of it.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-tytree-type&quot;&gt;The &lt;em&gt;TyTree&lt;/em&gt; Type&lt;/h2&gt;
+
+&lt;p&gt;We can’t expect to normally match on a &lt;code&gt;Type&lt;/code&gt; because it’s not inductively defined. What we can do is create a reflection of it to be able to describe in an elegant fashion.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Inductive TyTree : Type :=
+| tyTree_M (T : Type) : TyTree
+| tyTree_MFA {m : MTele} (T : MTele_Ty m) : TyTree
+| tyTree_In (s : Sort) {m : MTele} (F : InF s m) : TyTree
+| tyTree_imp (T : TyTree) (R : TyTree) : TyTree
+| tyTree_FATele {m : MTele} (T : MTele_Ty m) (F : forall t : MTele_val T, TyTree) : TyTree
+| tyTree_FATele1 (m : MTele) (F : forall (T : MTele_Ty m), TyTree) : TyTree
+| tyTree_FA (T : Type) (F : T -&amp;gt; TyTree) : TyTree
+| tyTree_FAType (F : Type -&amp;gt; TyTree) : TyTree
+| tyTree_base (T : Type) : TyTree
+.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Let’s see some types written with &lt;code&gt;TyTree&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Let R := tyTree_FAType (fun T : Type =&amp;gt; (tyTree_FA T (fun t : T =&amp;gt; tyTree_M T))).
+Let r : to_ty r := @ret.
+
+Let T : TyTree := tyTree_FAType (fun A =&amp;gt; tyTree_imp (tyTree_base Exception) (tyTree_M A)).
+Let t : to_ty T := @raise'.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Here a function called &lt;code&gt;to_ty&lt;/code&gt; is used to tranforms a &lt;code&gt;TyTree&lt;/code&gt; to it’s corresponded &lt;code&gt;Type&lt;/code&gt;. It’s really important that the return type of &lt;code&gt;to_ty&lt;/code&gt; is just &lt;code&gt;Type&lt;/code&gt; and not &lt;code&gt;M Type&lt;/code&gt; because it allows the function to be used in the type of a function.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Fixpoint to_ty (X : TyTree) : Type :=
+  match X as X' with
+  | tyTree_M T =&amp;gt; M T
+  | tyTree_MFA T =&amp;gt; MFA T
+  | tyTree_In s F =&amp;gt; MTele_val (MTele_In s F)
+  | tyTree_imp T R =&amp;gt; to_ty T -&amp;gt; to_ty R
+  | @tyTree_FATele m T F =&amp;gt; forall T, to_ty (F T)
+  | tyTree_FATele1 m F =&amp;gt; forall T : (MTele_Ty m), to_ty (F T) 
+  | tyTree_FA T F =&amp;gt; forall t : T, to_ty (F t)
+  | tyTree_FAType F =&amp;gt; forall T : Type, to_ty (F T)
+  | tyTree_base T =&amp;gt; T
+  end.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;There are a lot of constructors in &lt;code&gt;TyTree&lt;/code&gt; so let’s see how some of correspond to each other.&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Normal&lt;/th&gt;
+      &lt;th&gt;Lifted&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;code&gt;tyTree_M (T : Type)&lt;/code&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;code&gt;tyTree_MFA {m : MTele} (T : MTele_Ty m)&lt;/code&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;code&gt;tyTree_FAType (F : Type -&amp;gt; TyTree)&lt;/code&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;code&gt;tyTree_FATele1 (m : MTele) (F : MTele_Ty m -&amp;gt; TyTree)&lt;/code&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;code&gt;tyTree_FA (T : Type) (F : T -&amp;gt; TyTree)&lt;/code&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;code&gt;tyTree_FATele {m : MTele} (T : MTele_Ty m) (F : MTele_val T -&amp;gt; TyTree)&lt;/code&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;The ones that don’t correspond to another one are the more interesting ones:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code&gt;tyTree_base&lt;/code&gt;: this constructor is used for types that are not under the monad and that express a value of that type. For example &lt;code&gt;5 : nat&lt;/code&gt; and &lt;code&gt;5 : to_ty (tyTree_base nat)&lt;/code&gt; are both true.&lt;/li&gt;
+  &lt;li&gt;&lt;code&gt;tyTree_imp&lt;/code&gt;: this constructor represents implications where the left and right are not dependant. The function that sums &lt;code&gt;1&lt;/code&gt; to any number could have the type &lt;code&gt;sum : tyTree_imp (tyTree_base nat) (tyTree_base nat)&lt;/code&gt;.&lt;/li&gt;
+  &lt;li&gt;&lt;code&gt;tyTree_In&lt;/code&gt; is more complicated because it will only be used in the final type that is returnes and not in a normal function. It will be explained better in the future, but for now it’s the constructor that will allow us to use &lt;code&gt;MTele_In&lt;/code&gt; like it was done in &lt;code&gt;mbind&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;the-checker-function&quot;&gt;The &lt;code&gt;checker&lt;/code&gt; function&lt;/h2&gt;
+
+&lt;p&gt;The following function is used as a restriction on the domain of &lt;code&gt;lift&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Fixpoint checker (pol : bool) (l : bool) (X : TyTree) : P
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The proposition that is returned can then be proved or not. If it cannot be proved it means that the type of interest is not &lt;em&gt;liftable&lt;/em&gt;. The actual proof that this types are &lt;em&gt;unliftable&lt;/em&gt; is not yet on paper.&lt;/p&gt;
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Returning a lifted function type</title>
+   <link href="http://hyde.getpoole.com/coq/mtac/2018/11/12/returning_a_lifted_type/"/>
+   <updated>2018-11-12T15:47:00+01:00</updated>
+   <id>http://hyde.getpoole.com/coq/mtac/2018/11/12/returning_a_lifted_type</id>
+   <content type="html">&lt;p&gt;The main goal of all of this is to be able to adapt a function to telescopes automatically. The first step in this is to be able to get the type of this of this function. To clarify let’s use an example:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ret : forall A : Type, A -&amp;gt; M A
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we have already seen what &lt;code&gt;mret&lt;/code&gt; looks like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;mret: forall (m : MTele) (A : MTele_Ty m), MTele_val A -&amp;gt; MFA A
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The interesting part would be being able to guess the &lt;em&gt;lifted&lt;/em&gt; type of the function. To do this I coded a function called &lt;code&gt;liftT&lt;/code&gt;. We will go through it by parts.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-liftt-function&quot;&gt;The &lt;em&gt;liftT&lt;/em&gt; function&lt;/h2&gt;
+
+&lt;p&gt;Before starting, notice that this function is not the final result of my research, it’s just a preliminary step into the types. The final result involves also lifting the actual function.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;liftT&lt;/code&gt; function takes a type (the one from the function we’re interested) and a telescope, and it returns a value of &lt;code&gt;M Type&lt;/code&gt;. The telescope is the one that indicated what arguments we want to &lt;em&gt;add&lt;/em&gt;. I use a function called &lt;code&gt;repl&lt;/code&gt; which I’ll explain in the examples up next.&lt;/p&gt;
+
+&lt;p&gt;The idea is just to match the type with certain situations that are important. I’ll cover some cases next:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;code&gt;[? m A] @repl m SType A&lt;/code&gt;: in this case we receive something with &lt;code&gt;repl&lt;/code&gt;. We use this function to denote that the element should be swapped by some telescop-based-value. In this case we replace it with an &lt;code&gt;MTele_val A&lt;/code&gt;.&lt;/li&gt;
+  &lt;li&gt;&lt;code&gt;[? (V : forall X : Type, Type)] (forall X : Type, V X)&lt;/code&gt;: we found some &lt;code&gt;V&lt;/code&gt; that’s wrapped in a forall over a type &lt;code&gt;X&lt;/code&gt;. In this case we use &lt;code&gt;\nu&lt;/code&gt; to create a value of type &lt;code&gt;MTele_Ty m&lt;/code&gt; which we will use to momentarily replace &lt;code&gt;X&lt;/code&gt;. Then we recurse on &lt;code&gt;V X&lt;/code&gt; (still using &lt;code&gt;repl&lt;/code&gt;) and finally we abstract &lt;code&gt;X&lt;/code&gt;. The same principle is used in the two cases below.&lt;/li&gt;
+  &lt;li&gt;&lt;code&gt;[? A B] A -&amp;gt; B&lt;/code&gt;: the implication case is where things get a little bit more complicated. Remember that in the type of &lt;code&gt;mbind&lt;/code&gt; the function was using &lt;code&gt;MTele_In&lt;/code&gt;. To actually be able to compute a type of that kind more information is needed. I used the concept of polarity. When we get to the implication, the left side is negative and the right side is positive. If it’s negative &lt;code&gt;lift_neg&lt;/code&gt; is called.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;pre&gt;&lt;code&gt;Polymorphic Definition liftT (A : Type) (m : MTele) : M Type :=
+  (mfix1 f (A : Type) : M Type :=
+    M.print_term A;;
+    mmatch A in Type as A' return M Type with
+    | [? m A] @repl m SType A =&amp;gt;
+        M.print &quot;Case: repl A&quot;;;
+        ret (MTele_val A)
+    | [? A] (M (@repl m SType A)):Type =&amp;gt;
+        M.print &quot;Case: M (repl A)&quot;;;
+        ret ((MFA A):Type)
+    | [? A] (M A):Type =&amp;gt;
+        M.print &quot;Case: M A&quot;;;
+        ret (MTele_ConstT A m)
+    | [? A B] A -&amp;gt; B =&amp;gt;
+        M.print &quot;Case: implication&quot;;;
+        A' &amp;lt;- lift_neg A m;
+        B' &amp;lt;- f B;
+        ret (A' -&amp;gt; B')
+    | [? (V : forall X : Type, Type)] (forall X : Type, V X) =&amp;gt;
+        M.print &quot;Case: forall1 type&quot;;;
+        \nu_f for A as X : MTele_Ty m,
+            v &amp;lt;- f (V (@repl m SType X));
+            abs_prod_type X v
+    | [? (V : forall X : Type, Prop)] (forall X : Type, V X):Type =&amp;gt;
+        M.print &quot;Case: forall1 prop&quot;;;
+        \nu_f for A as X : MTele_Ty m,
+            let x := reduce (RedOneStep [rl:RedBeta]) (V (@repl m SType X)) in
+            v &amp;lt;- f (x);
+            abs_prod_type X v
+    | [? T (V : forall x : T, Type)] (forall t : T, V t) =&amp;gt;
+        M.print &quot;Case: forall2&quot;;;
+        \nu_f for A as t : T,
+            v1 &amp;lt;- f (V t);
+            abs_prod_type t v1
+    | [? m V A] (V (@repl m SType A)) =&amp;gt;
+        M.failwith &quot;Unused replace&quot;
+    | _ =&amp;gt;
+        ret (A)
+    end) A.
+
+Polymorphic Definition liftT' {A} (a : A) (m : MTele) := lift A m.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Next up, &lt;code&gt;lift_neg&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;treating-negative-parts&quot;&gt;Treating negative parts&lt;/h3&gt;
+
+&lt;p&gt;The &lt;code&gt;lift_neg&lt;/code&gt; function assumes the type &lt;code&gt;A&lt;/code&gt; is in a negative position. The other function, &lt;code&gt;lift_neg'&lt;/code&gt; is given the two functions that &lt;code&gt;MTele_In&lt;/code&gt; so then &lt;code&gt;lift_neg&lt;/code&gt; return an &lt;code&gt;MTele_val (MTele_In ...)&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Polymorphic Program Definition lift_neg' (A : Type) (m : MTele)
+(now_ty : forall (s : Sort), MTele_Sort s m -&amp;gt; s)
+(_ : forall (s: Sort) (T : MTele_Sort s m), MTele_val T -&amp;gt; now_ty s T) : M Type :=
+    (mfix1 f (A : Type) :
+    M Type :=
+        mmatch A in Type as A' return
+        M Type with
+        | [? A] @repl m SType A =&amp;gt;
+            ret (now_ty SType A)
+        | [? (A : MTele_Sort SType m)] (M (@repl m SType A)):Type =&amp;gt;
+            ret (let A' := now_ty SType A in
+                (M A'):Type)
+        | [? A B] A -&amp;gt; B =&amp;gt;
+            A' &amp;lt;- f A;
+            B' &amp;lt;- f B;
+            ret (A' -&amp;gt; B')
+        | _ =&amp;gt; ret (A)
+        end) A.
+
+Polymorphic Definition lift_neg (A : Type) (m : MTele) : M Type :=
+    \nu now_ty : forall (s : Sort), MTele_Sort s m -&amp;gt; s,
+      \nu now_val : _,
+        F &amp;lt;- lift_neg' A m now_ty now_val;
+        let F := F:(SType) in
+        F &amp;lt;- abs_fun (A := forall (s: Sort) (T : MTele_Sort s m), MTele_val T -&amp;gt; now_ty s T) (P := fun now_val =&amp;gt; SType) now_val F;
+        F &amp;lt;- abs_fun (A := forall (s : Sort), MTele_Sort s m -&amp;gt; s) (P := fun now_ty =&amp;gt; (forall (s: Sort) (T : MTele_Sort s m), MTele_val T -&amp;gt; now_ty s T) -&amp;gt; SType) now_ty F;
+        ret (MTele_val (@MTele_In SType m F)).
+&lt;/code&gt;&lt;/pre&gt;
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Implementing mret with curry/uncurry functions</title>
+   <link href="http://hyde.getpoole.com/coq/mtac/2018/11/12/implementing-mret-with-curry/"/>
+   <updated>2018-11-12T15:47:00+01:00</updated>
+   <id>http://hyde.getpoole.com/coq/mtac/2018/11/12/implementing-mret-with-curry</id>
+   <content type="html">&lt;p&gt;One of the simplest primitives of &lt;em&gt;Mtac2&lt;/em&gt; is &lt;code&gt;ret : forall A : Type, A -&amp;gt; M A&lt;/code&gt;. Implementing it in the same way as &lt;code&gt;mbind&lt;/code&gt; it’s not hard. Both functions stick to a pattern at the time of “translating” them.&lt;/p&gt;
+
+&lt;p&gt;The type will change to this: &lt;code&gt;mret : forall (m : MTele) (A : MTele_Ty), MTele_val A -&amp;gt; MFA A&lt;/code&gt;. Notice that because now &lt;code&gt;A&lt;/code&gt; is an &lt;code&gt;MTele_Ty&lt;/code&gt;, any appereance of &lt;code&gt;A&lt;/code&gt; is replaced by &lt;code&gt;A : MTele_val m&lt;/code&gt; and any &lt;code&gt;M A&lt;/code&gt; replaced by &lt;code&gt;MFA A&lt;/code&gt;. The implementation looks similar to the one of &lt;code&gt;mbind&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-Coq&quot;&gt;  Fixpoint mret {m : MTele} : forall {A : MTele_Ty m}, MTele_val A -&amp;gt; MFA A :=
+    match m with
+    | mBase =&amp;gt; fun A ma =&amp;gt; @ret A ma
+    | @mTele X F =&amp;gt; fun A ma x =&amp;gt; @mret (F x) (A x) (ma x)
+    end.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&quot;another-way&quot;&gt;Another way&lt;/h3&gt;
+
+&lt;p&gt;In &lt;code&gt;Mtac2/theories/meta/MFixDef.v&lt;/code&gt; we can find a function called &lt;code&gt;mfix'&lt;/code&gt; and other functions that are used to define &lt;code&gt;mfix'&lt;/code&gt;. This way of implementing functions is based on the curryfication and uncurryfication of a function that takes some value of a telescope-derived type. With this “technique” we can define a telescope version of &lt;em&gt;fixpoints&lt;/em&gt;, allowing us to take an arbitrary amount of elements. But with the previous method we cannot define &lt;code&gt;mfix'&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Probably in a future blog the matter of what can be done (or maybe what cannot be done) with the previous method will be discussed. For now, the focus is on reimplementing functions that work with the original method.&lt;/p&gt;
+
+&lt;p&gt;The implementation is the following:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Definition mret {m : MTele} : forall {A : MTele_Ty m}, MTele_val A -&amp;gt; MFA A :=
+  fun A mv_a =&amp;gt; curry (fun U : UNCURRY m =&amp;gt;
+                     let mv_a := (uncurry_val mv_a) in
+                     ret (mv_a U)).
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;code&gt;A : MTele_Ty&lt;/code&gt; and &lt;code&gt;mv_a : MTele_val A&lt;/code&gt; are introduced. Because we want to use &lt;code&gt;ret&lt;/code&gt; we need to provide a value without the telescopes. The function &lt;code&gt;uncurry_val&lt;/code&gt; is able to do this. It’s similar to &lt;code&gt;uncurry&lt;/code&gt; but instead speaks of a value that is not inside the monad. And because we need to uncurry this value we need some element of type &lt;code&gt;UNCURRY m&lt;/code&gt;. The way of doing this is to use &lt;code&gt;curry&lt;/code&gt; which then allows us to introduce &lt;code&gt;U&lt;/code&gt;. Because &lt;code&gt;mv_a&lt;/code&gt; is now an uncurried value, when we pass it to &lt;code&gt;ret&lt;/code&gt; we recieve an uncurried value in the monad, so using &lt;code&gt;curry&lt;/code&gt; makes perfect sense.&lt;/p&gt;
+</content>
+ </entry>
  
  <entry>
    <title>Using the MTele_In function</title>
@@ -151,9 +484,9 @@ mbind {A : Type} {m : MTele} : forall {B : MTele_Ty m}, M A -&amp;gt; (A -&amp;g
   end.
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;The way this works is by induction on the telescope. When the telescope is &lt;code&gt;mBase&lt;/code&gt; we just use the regular &lt;code&gt;bind&lt;/code&gt;, because we don’t have any kind of argument of any type that we want to “add” to &lt;code&gt;B&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The way this works is by induction on the telescope. When the telescope is &lt;code&gt;mBase&lt;/code&gt; we just use the regular &lt;code&gt;bind&lt;/code&gt;, because we don’t have any kind of argument of any type that we want to “add” to &lt;code&gt;B&lt;/code&gt; (or we already did before). When the telescope is &lt;code&gt;@mTele X F&lt;/code&gt; we just peel one layer of the telescope by each recursive step. Notice the last argument of &lt;code&gt;mbind&lt;/code&gt;, the function, uses the original &lt;code&gt;f&lt;/code&gt; but it adds a value &lt;code&gt;x&lt;/code&gt; of type &lt;code&gt;X&lt;/code&gt;. If &lt;code&gt;m&lt;/code&gt; is a long telescope: &lt;code&gt;m := [tele T1 T2 ... Tn]&lt;/code&gt; this function will grow with each step finally approaching something like &lt;code&gt;fun a =&amp;gt; f a t1 t2 .. tn&lt;/code&gt;, where &lt;code&gt;t1 : T1&lt;/code&gt;, &lt;code&gt;t2 : T2&lt;/code&gt; … &lt;code&gt;tn : Tn&lt;/code&gt;.&lt;/p&gt;
 
-&lt;p&gt;When the telescope is &lt;code&gt;@mTele X F&lt;/code&gt; we just peel one layer of the telescope by each recursive step. Notice the last argument of &lt;code&gt;mbind&lt;/code&gt;, the function, uses the original &lt;code&gt;f&lt;/code&gt; but it adds a value &lt;code&gt;x&lt;/code&gt; of type &lt;code&gt;X&lt;/code&gt;. If &lt;code&gt;m&lt;/code&gt; is a long telescope: &lt;code&gt;m := [tele T1 T2 ... Tn]&lt;/code&gt; this function will grow with each step finally approaching something like &lt;code&gt;fun a =&amp;gt; f a t1 t2 .. tn&lt;/code&gt;, where &lt;code&gt;t1 : T1&lt;/code&gt;, &lt;code&gt;t2 : T2&lt;/code&gt; … &lt;code&gt;tn : Tn&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Something that may not be as obvious is the fact that we take all the arguments of the type after inspecting &lt;code&gt;m&lt;/code&gt;. That’s because all of this values depend on &lt;code&gt;m&lt;/code&gt; so if we did this before the &lt;code&gt;match&lt;/code&gt; this elements wouldn’t know if &lt;code&gt;m&lt;/code&gt; was an &lt;code&gt;mBase&lt;/code&gt; or an &lt;code&gt;mTele&lt;/code&gt;.&lt;/p&gt;
 </content>
  </entry>
  

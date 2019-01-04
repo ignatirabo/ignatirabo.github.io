@@ -11,7 +11,7 @@
 
   <title>
     
-      Implementing a new bind for Mtac2 with telescopes &middot; Ignacio
+      Ignacio &middot; A little blog
     
   </title>
 
@@ -85,11 +85,73 @@
 
 
     <div class="content container">
-      <div class="post">
-  <h1 class="post-title">Implementing a new bind for Mtac2 with telescopes</h1>
-  <span class="post-date">09 Nov 2018</span>
-  <span class="post-edit"></span>
-  <p>Because <em>Mtac2</em> uses monads there is a <code>bind</code> function that has a type</p>
+      <div class="posts">
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/coq/mtac/2018/11/12/using-mtelein/">
+        Using the MTele_In function
+      </a>
+    </h1>
+
+    <span class="post-date">12 Nov 2018</span>
+
+    <p>In the previous post I explained a possible implementation of <code>mbind</code> which had type:</p>
+
+<pre><code class="language-Coq">Fixpoint mbind {m : MTele} {A : Type} : forall {B : MTele_Ty m}, M A -&gt; (A -&gt; MFA B) -&gt; MFA B.
+</code></pre>
+
+<p>Now it’s in our interest to change this a little bit.</p>
+
+<p>Roughly, the type of <code>mBind</code> we’re now interested:</p>
+
+<pre><code>Fixpoint mbind {m : MTele} : forall {A B : MTele_Ty m}, MFA A -&gt; forall x .. z, (A -&gt; M B) -&gt; MFA B.
+</code></pre>
+
+<p>To do this a new function is needed.</p>
+
+<pre><code class="language-Coq">Fixpoint MTele_In (s : Sort) {n : MTele} :
+  (forall (now_ty : forall s, MTele_Sort s n -&gt; s)
+          (now_val : forall s {T : MTele_Sort s n}, MTele_val T -&gt; now_ty s T), s)
+  -&gt; MTele_Sort s n.
+</code></pre>
+
+<p>It’s not the nicest looking types but it’s fairly simple. First, let’s inspect the type and then what the function does.</p>
+
+<p><code>MTele_in</code> takes <code>s : Sort</code>, <code>m :MTele</code> and then quantifies over two functions: <code>now_ty</code> and <code>now_val</code>. The idea behind this function is to able to work with various telecosped types at the same time. In the previous version on <code>mbind</code>, the <code>A</code> was just a plain coq type so we didn’t need this function. We’re not interested in <code>now_val</code> for what we’re doing so I’ll just ignore it.</p>
+
+<p>The function <code>now_ty : forall s, MTele_Sort s n -&gt; s</code> let’s us access telescoped types as if they were regular Coq types. So what we’re interested in doing is taking our <code>A</code> and <code>B</code> which are <code>MTele_Ty</code> and be able to write <code>A -&gt; M B</code>. And that’s we will describe in the signature of the new <code>mbind</code>.</p>
+
+<pre><code class="language-Coq">Fixpoint mbind {m : MTele} : forall {A B : MTele_Ty m},
+                              MFA A -&gt;
+                              (MTele_val [withP now_ty , _ =&gt;
+                                let A' := now_ty SType A in
+                                let B' := now_ty SType B in
+                                (A' -&gt; M B')]) -&gt;
+                              MFA B :=
+  match m with
+  | mBase =&gt; fun A B ma f =&gt; @bind A B ma f
+  | @mTele X F =&gt; fun A B ma f x =&gt; @mbind (F x) (A x) (B x) (ma x) (f x)
+  end.
+</code></pre>
+
+<p>Now, the <code>f</code> function we are left with looks like <code>forall x..z, (A x..z -&gt; M (B x..z))</code>, so we can use the same approach as before by just adding a variable from the telescope with each step.</p>
+
+<p>Later we will see why we can’t use this approach to write some functions, for example <code>fix0</code> which would make a fixpoint with no arguments.</p>
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/coq/mtac/2018/11/09/bind-in-mtac/">
+        Implementing a new bind for Mtac2 with telescopes
+      </a>
+    </h1>
+
+    <span class="post-date">09 Nov 2018</span>
+
+    <p>Because <em>Mtac2</em> uses monads there is a <code>bind</code> function that has a type</p>
 
 <pre><code class="language-Coq">bind : forall {A : Type} {B : Type}, M A -&gt; (A -&gt; M B) -&gt; M B.
 </code></pre>
@@ -176,42 +238,96 @@ mbind {A : Type} {m : MTele} : forall {B : MTele_Ty m}, M A -&gt; (A -&gt; MFA B
 
 <p>Something that may not be as obvious is the fact that we take all the arguments of the type after inspecting <code>m</code>. That’s because all of this values depend on <code>m</code> so if we did this before the <code>match</code> this elements wouldn’t know if <code>m</code> was an <code>mBase</code> or an <code>mTele</code>.</p>
 
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/misc/coq/2017/11/26/coq-in-spacemacs/">
+        Installing Coq for Spacemacs
+      </a>
+    </h1>
+
+    <span class="post-date">26 Nov 2017</span>
+
+    <p>I had a very hard time getting Coq to work as expected on Spacemacs. I collected everything I found and made this little tutorial.</p>
+
+<p>First of all we need to install <strong>Coq</strong>, though <strong>Opam</strong>. Debian-based users can do this with <code>apt-get</code>.</p>
+
+<pre><code>sudo apt-get install opam
+opam install coq
+</code></pre>
+
+<p>In fedora:</p>
+
+<pre><code>sudo yum install opam.x86_64
+opam install coq
+</code></pre>
+
+<p>The next step is getting <strong>Proof General</strong>. <a href="https://proofgeneral.github.io/">Proof General</a> is a generic front-end for <em>proof assistants</em> based on Emacs.</p>
+
+<pre><code>git clone https://github.com/ProofGeneral/PG ~/.emacs.d/lisp/PG
+cd ~/.emacs.d/lisp/PG
+make
+</code></pre>
+
+<p>And add this to you dotfile in <code>dotspacemacs/user-init</code>. This is done with <code>SPC f e d</code> in <strong>Evil mode</strong>.</p>
+
+<pre><code>(load "~/.emacs.d/lisp/PG/generic/proof-site")
+</code></pre>
+
+<p>The next step is installing <strong>company-coq</strong> with <strong>MELPA</strong>. Luckily, MELPA comes with the default Spacemacs installation. Just use <code>M-x package-refresh-contents RET</code> followed by <code>M-x package-install RET company-coq RET</code> to install and byte-compile company-coq and its dependencies (some of them will produce a few warnings; that’s OK).</p>
+
+<p>Next, we have to download a <a href="https://github.com/olivierverdier/spacemacs-coq">Coq layer</a> for Spacemacs. This will provide all the keybindings and configurations we need to start working.</p>
+
+<p>Before dowloading the layer we need to change the <code>dotspacemacs-configuration-layer-path</code> in our <code>.spacemacs</code> dotfile. Find that line and change it to this:</p>
+
+<pre><code>dotspacemacs-configuration-layer-path '("~/.spacemacs.d/")
+</code></pre>
+
+<p>This informs Spacemacs that we will keep our configuration layers in this folder, so then Spacemacs knows how to reach them. Now we need to create the directory and clone the layer.</p>
+
+<pre><code>mkdir ~/.spacemacs.d
+mkdir ~/.spacemacs.d/layers
+cd ~/.spacemacs.d/layers
+git clone https://github.com/olivierverdier/spacemacs-coq.git
+mv spacemacs-coq coq
+</code></pre>
+
+<p>Now add <code>coq</code> to your <code>dotspacemacs-configuration-layers</code>.</p>
+
+<p>We’re almost finished. Let’s go to the location of the layer we’ve just downloaded and open <code>config.el</code>. We need to change the <code>proof-general-path</code>:</p>
+
+<pre><code>(defvar proof-general-path "~/.emacs.d/lisp/PG/generic/proof-site"
+  "The path to proof general")
+</code></pre>
+
+<p>Finally, the last step (totally optional) will serve <strong>Evil</strong> users. If this is not configured, everytime you hit <code>&lt;ESC&gt;</code>, Emacs will autocomplete the current line.</p>
+
+<pre><code>(setq evil-want-abbrev-expand-on-insert-exit nil)
+</code></pre>
+
+<p>This should be added before Evil loads, that means, before <code>dotspacemacs/user-init</code> in your <code>.spacemacs</code> file. This was found <a href="https://github.com/syl20bnr/spacemacs/issues/8853">here</a>.</p>
+
+<p>Hopefully, you’ve installed Coq in Spacemacs. In case you’re curious there’s a tutorial included with <strong>Company Coq</strong>.</p>
+
+<pre><code>M-x company-coq-tutorial 
+</code></pre>
+
+
+  </div>
+  
 </div>
 
-<div class="related">
-  <h2>Related Posts</h2>
-  <ul class="related-posts">
+<div class="pagination">
+  
+    <span class="pagination-item older">Older</span>
+  
+  
     
-      <li>
-        <h3>
-          <a href="/coq/mtac/2019/01/04/the_other_functions/">
-            The other functions
-            <small>04 Jan 2019</small>
-          </a>
-        </h3>
-      </li>
+      <a class="pagination-item newer" href="/">Newer</a>
     
-      <li>
-        <h3>
-          <a href="/coq/mtac/2019/01/04/setting_up_environment_for_lift/">
-            Setting up the environment for `lift`
-            <small>04 Jan 2019</small>
-          </a>
-        </h3>
-      </li>
-    
-      <li>
-        <h3>
-          <a href="/coq/mtac/2018/11/12/returning_a_lifted_type/">
-            Returning a lifted function type
-            <small>12 Nov 2018</small>
-          </a>
-        </h3>
-      </li>
-    
-  </ul>
+  
 </div>
-
     </div>
 
   </body>

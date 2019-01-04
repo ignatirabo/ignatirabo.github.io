@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      The other functions &middot; Ignacio
+    
+  </title>
+
+  <!-- Javascript -->
+  <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/syntax.css">
+  <link rel="stylesheet" href="/public/css/hyde.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-144-precomposed.png">
+                                 <link rel="shortcut icon" href="/public/favicon.ico">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
+</head>
+
+
+  <body class="theme-base-0c">
+
+    <div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h1>
+        <a href="/">
+          Ignacio
+        </a>
+      </h1>
+      <p class="lead">A little blog.</p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item" href="/">Home</a>
+
+      
+
+      
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/about/">About</a>
+          
+        
+      
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+      <br>
+      <span class="sidebar-nav-item">Made with <a href="https://jekyllrb.com/">Jekyll</a> and <a href="http://hyde.getpoole.com/">Hyde</a></span>
+      <span class="sidebar-nav-item">Currently v2.1.0</span>
+    </nav>
+
+    <p>&copy; 2019. All rights reserved.</p>
+  </div>
+</div>
+
+
+    <div class="content container">
+      <div class="post">
+  <h1 class="post-title">The other functions</h1>
+  <span class="post-date">04 Jan 2019</span>
+  <span class="post-edit"></span>
+  <p>There are two functions that complement lift. One of them is <code>lift_in</code> which basically does the same as <code>lift</code> but basically wraps the type in a <code>MTele_In</code> (just like what happens in <code>mbind</code>. The other function is <code>m_check</code> which checks if a certain type is <em>under</em> the monad in the <code>TyTree</code>. By using <code>m_check</code> we know if we want to lift the type or just leave it as it is.</p>
+
+<h2 id="the-lift_in-function">The <em>lift_in</em> function</h2>
+
+<p>This function is a <em>mini-lift</em>. It returns an element of the following type:</p>
+
+<pre><code>Local Notation InF s n := (forall now_ty : forall s0 : Sort, MTele_Sort s0 n -&gt; s0, (forall (s0 : Sort) (T : MTele_Sort s0 n), MTele_val T -&gt; now_ty s0 T) -&gt; s).
+
+Let lift_inR {m} (U : UNCURRY m) (T : TyTree) :=
+  {F : InF SType m &amp; (to_ty T = F (now_ty U) (now_val U))}.
+</code></pre>
+
+<p>This <code>F</code> function is like the one seen before in <code>MTele_In</code>, so then it fits perfectly with <code>uncurry_in</code>.</p>
+
+<p>Whatever <code>T : TyTree</code> we pass to <code>lift_in</code> we will recieve a function <code>F (now_ty U) (now_val U)</code> that corresponds to the tree, where <code>U : UNCURRY m</code> is the one from <code>lift</code>.</p>
+
+<p>Here is the current implementation:</p>
+
+<pre><code>Definition lift_in {m : MTele} (U : UNCURRY m) (T : TyTree)
+                 (p l : bool) :
+                 M (lift_inR U T) :=
+  (mfix3 f (T : TyTree) (p l : bool) : M (lift_inR U T) :=
+    mmatch T as e return M (lift_inR U e) with
+    | [? (A : MTele_Ty m)] tyTree_base (RETURN A U) =&gt;
+      print "lift_in: base";;
+      let F : InF SType m := fun nty nval =&gt; nty SType A in
+      let eq_p : to_ty (tyTree_base (RETURN A U)) = F (now_ty U) (now_val U) := eq_refl in
+      ret (existT _ F eq_p)
+    | [? (A : MTele_Ty m)] tyTree_M (RETURN A U) =&gt;
+      print "lift_in: M";;
+      let F : InF SType m := fun nty nval =&gt; M (nty SType A) in
+      let eq_p : to_ty (tyTree_M (RETURN A U)) = F (now_ty U) (now_val U) := eq_refl in
+      ret (existT _ F eq_p)
+    | [? X Y] tyTree_imp X Y =&gt;
+      print "lift_in: imp";;
+      ''(existT _ FX pX) &lt;- f X (negb p) true;
+      ''(existT _ FY pY) &lt;- f Y p false;
+      let F : InF SType m := fun nty nval =&gt; (FX nty nval) -&gt; (FY nty nval) in
+      let eq_p : to_ty (tyTree_imp X Y) = F (now_ty U) (now_val U) :=
+        ltac:(simpl in *; rewrite pX, pY; refine eq_refl) in
+      ret (existT _ F eq_p)
+    | [? A] tyTree_base A =&gt;
+      print "lift_in: unlift_in";;
+      let F : InF SType m := fun nty nval =&gt; A in
+      ret (existT _ F (eq_refl))
+    | _ =&gt; raise UnLiftInCase
+    end) T p l.
+</code></pre>
+
+<p>The only recursion appears in the implication case. The <code>_</code> case means to match something strange we don’t expect. The good thing about this is that the exception can be handled and does not break the <em>lifting</em>.</p>
+
+<h2 id="the-m_check-function">The <em>m_check</em> function</h2>
+
+<p>This function is pretty simple as it only checks for a certain case, otherwise it returns <code>false</code>, meaning that the type <code>A</code> we passed to it is not found under the monad.</p>
+
+<pre><code>(* Checks if a given type A is found "under M" *)
+(* true iff A is "under M", false otherwise *)
+Definition m_check (T : TyTree) (A : Type) : M bool :=
+  print "m_check on T:";;
+  print_term T;;
+  (mfix1 f (T : TyTree) : M bool :=
+  mmatch T return M bool with
+  | [? X] tyTree_base X =&gt; ret false
+  | [? X] tyTree_M X =&gt;
+    mmatch X return M bool with
+    | A =&gt; ret true
+    | _ =&gt; ret false
+    end
+  | [? X Y] tyTree_imp X Y =&gt; fX &lt;- f X;
+                             fY &lt;- f Y;
+                             let r := orb fX fY in
+                             ret r
+  | [? F] tyTree_FAType F =&gt; print_term (F A);;
+                            \nu X : Type,
+                            f (F X)
+  | _ =&gt; ret false
+  end) T.
+</code></pre>
+
+<p>Knowing if the result is <code>false</code> or <code>true</code>, then <code>lift</code> knows wether to lift if or not. That is for example in the following case:</p>
+
+<pre><code>Let T : TyTree := tyTree_FAType (fun A =&gt; tyTree_FAType (fun B =&gt; tyTree_imp (tyTree_base A) (tyTree_M B))).
+</code></pre>
+<p>In this type the type <code>tyTree_base A</code> should remain the same after <code>lift</code> given the call to <code>m_check</code> returns <code>false</code>.</p>
+
+</div>
+
+<div class="related">
+  <h2>Related Posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/coq/mtac/2019/01/04/setting_up_environment_for_lift/">
+            Setting up the environment for `lift`
+            <small>04 Jan 2019</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/coq/mtac/2018/11/12/returning_a_lifted_type/">
+            Returning a lifted function type
+            <small>12 Nov 2018</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/coq/mtac/2018/11/12/implementing-mret-with-curry/">
+            Implementing mret with curry/uncurry functions
+            <small>12 Nov 2018</small>
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+    </div>
+
+  </body>
+</html>

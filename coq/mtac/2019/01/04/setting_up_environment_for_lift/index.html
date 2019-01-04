@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      Setting up the environment for `lift` &middot; Ignacio
+    
+  </title>
+
+  <!-- Javascript -->
+  <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/syntax.css">
+  <link rel="stylesheet" href="/public/css/hyde.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-144-precomposed.png">
+                                 <link rel="shortcut icon" href="/public/favicon.ico">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
+</head>
+
+
+  <body class="theme-base-0c">
+
+    <div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h1>
+        <a href="/">
+          Ignacio
+        </a>
+      </h1>
+      <p class="lead">A little blog.</p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item" href="/">Home</a>
+
+      
+
+      
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/about/">About</a>
+          
+        
+      
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+      <br>
+      <span class="sidebar-nav-item">Made with <a href="https://jekyllrb.com/">Jekyll</a> and <a href="http://hyde.getpoole.com/">Hyde</a></span>
+      <span class="sidebar-nav-item">Currently v2.1.0</span>
+    </nav>
+
+    <p>&copy; 2019. All rights reserved.</p>
+  </div>
+</div>
+
+
+    <div class="content container">
+      <div class="post">
+  <h1 class="post-title">Setting up the environment for `lift`</h1>
+  <span class="post-date">04 Jan 2019</span>
+  <span class="post-edit"></span>
+  <p>The final result is a function called <code>lift</code>. This function takes a telescope <code>m</code>, a type <code>T</code> and a function <code>t</code> of that type <code>T</code>, and <em>lifts</em> the function, meaning we get a new function with a more general type.</p>
+
+<p>The <code>lift</code> function needs a lot of stuff around it to work. Here I try to explain some of it.</p>
+
+<h2 id="the-tytree-type">The <em>TyTree</em> Type</h2>
+
+<p>We can’t expect to normally match on a <code>Type</code> because it’s not inductively defined. What we can do is create a reflection of it to be able to describe in an elegant fashion.</p>
+
+<pre><code>Inductive TyTree : Type :=
+| tyTree_M (T : Type) : TyTree
+| tyTree_MFA {m : MTele} (T : MTele_Ty m) : TyTree
+| tyTree_In (s : Sort) {m : MTele} (F : InF s m) : TyTree
+| tyTree_imp (T : TyTree) (R : TyTree) : TyTree
+| tyTree_FATele {m : MTele} (T : MTele_Ty m) (F : forall t : MTele_val T, TyTree) : TyTree
+| tyTree_FATele1 (m : MTele) (F : forall (T : MTele_Ty m), TyTree) : TyTree
+| tyTree_FA (T : Type) (F : T -&gt; TyTree) : TyTree
+| tyTree_FAType (F : Type -&gt; TyTree) : TyTree
+| tyTree_base (T : Type) : TyTree
+.
+</code></pre>
+
+<p>Let’s see some types written with <code>TyTree</code>:</p>
+
+<pre><code>Let R := tyTree_FAType (fun T : Type =&gt; (tyTree_FA T (fun t : T =&gt; tyTree_M T))).
+Let r : to_ty r := @ret.
+
+Let T : TyTree := tyTree_FAType (fun A =&gt; tyTree_imp (tyTree_base Exception) (tyTree_M A)).
+Let t : to_ty T := @raise'.
+</code></pre>
+
+<p>Here a function called <code>to_ty</code> is used to tranforms a <code>TyTree</code> to it’s corresponded <code>Type</code>. It’s really important that the return type of <code>to_ty</code> is just <code>Type</code> and not <code>M Type</code> because it allows the function to be used in the type of a function.</p>
+
+<pre><code>Fixpoint to_ty (X : TyTree) : Type :=
+  match X as X' with
+  | tyTree_M T =&gt; M T
+  | tyTree_MFA T =&gt; MFA T
+  | tyTree_In s F =&gt; MTele_val (MTele_In s F)
+  | tyTree_imp T R =&gt; to_ty T -&gt; to_ty R
+  | @tyTree_FATele m T F =&gt; forall T, to_ty (F T)
+  | tyTree_FATele1 m F =&gt; forall T : (MTele_Ty m), to_ty (F T) 
+  | tyTree_FA T F =&gt; forall t : T, to_ty (F t)
+  | tyTree_FAType F =&gt; forall T : Type, to_ty (F T)
+  | tyTree_base T =&gt; T
+  end.
+</code></pre>
+
+<p>There are a lot of constructors in <code>TyTree</code> so let’s see how some of correspond to each other.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Normal</th>
+      <th>Lifted</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>tyTree_M (T : Type)</code></td>
+      <td><code>tyTree_MFA {m : MTele} (T : MTele_Ty m)</code></td>
+    </tr>
+    <tr>
+      <td><code>tyTree_FAType (F : Type -&gt; TyTree)</code></td>
+      <td><code>tyTree_FATele1 (m : MTele) (F : MTele_Ty m -&gt; TyTree)</code></td>
+    </tr>
+    <tr>
+      <td><code>tyTree_FA (T : Type) (F : T -&gt; TyTree)</code></td>
+      <td><code>tyTree_FATele {m : MTele} (T : MTele_Ty m) (F : MTele_val T -&gt; TyTree)</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The ones that don’t correspond to another one are the more interesting ones:</p>
+
+<ul>
+  <li><code>tyTree_base</code>: this constructor is used for types that are not under the monad and that express a value of that type. For example <code>5 : nat</code> and <code>5 : to_ty (tyTree_base nat)</code> are both true.</li>
+  <li><code>tyTree_imp</code>: this constructor represents implications where the left and right are not dependant. The function that sums <code>1</code> to any number could have the type <code>sum : tyTree_imp (tyTree_base nat) (tyTree_base nat)</code>.</li>
+  <li><code>tyTree_In</code> is more complicated because it will only be used in the final type that is returnes and not in a normal function. It will be explained better in the future, but for now it’s the constructor that will allow us to use <code>MTele_In</code> like it was done in <code>mbind</code>.</li>
+</ul>
+
+<h2 id="the-checker-function">The <code>checker</code> function</h2>
+
+<p>The following function is used as a restriction on the domain of <code>lift</code>.</p>
+
+<pre><code>Fixpoint checker (pol : bool) (l : bool) (X : TyTree) : P
+</code></pre>
+
+<p>The proposition that is returned can then be proved or not. If it cannot be proved it means that the type of interest is not <em>liftable</em>. The actual proof that this types are <em>unliftable</em> is not yet on paper.</p>
+
+
+</div>
+
+<div class="related">
+  <h2>Related Posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/coq/mtac/2019/01/04/the_other_functions/">
+            The other functions
+            <small>04 Jan 2019</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/coq/mtac/2018/11/12/returning_a_lifted_type/">
+            Returning a lifted function type
+            <small>12 Nov 2018</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/coq/mtac/2018/11/12/implementing-mret-with-curry/">
+            Implementing mret with curry/uncurry functions
+            <small>12 Nov 2018</small>
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+    </div>
+
+  </body>
+</html>

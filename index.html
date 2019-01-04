@@ -69,13 +69,17 @@
           
         
       
+        
+          
+        
+      
 
       <br>
       <span class="sidebar-nav-item">Made with <a href="https://jekyllrb.com/">Jekyll</a> and <a href="http://hyde.getpoole.com/">Hyde</a></span>
       <span class="sidebar-nav-item">Currently v2.1.0</span>
     </nav>
 
-    <p>&copy; 2018. All rights reserved.</p>
+    <p>&copy; 2019. All rights reserved.</p>
   </div>
 </div>
 
@@ -85,230 +89,350 @@
   
   <div class="post">
     <h1 class="post-title">
-      <a href="/coq/mtac/2018/11/12/using-mtelein/">
-        Using the MTele_In function
+      <a href="/coq/mtac/2019/01/04/the_other_functions/">
+        The other functions
+      </a>
+    </h1>
+
+    <span class="post-date">04 Jan 2019</span>
+
+    <p>There are two functions that complement lift. One of them is <code>lift_in</code> which basically does the same as <code>lift</code> but basically wraps the type in a <code>MTele_In</code> (just like what happens in <code>mbind</code>. The other function is <code>m_check</code> which checks if a certain type is <em>under</em> the monad in the <code>TyTree</code>. By using <code>m_check</code> we know if we want to lift the type or just leave it as it is.</p>
+
+<h2 id="the-lift_in-function">The <em>lift_in</em> function</h2>
+
+<p>This function is a <em>mini-lift</em>. It returns an element of the following type:</p>
+
+<pre><code>Local Notation InF s n := (forall now_ty : forall s0 : Sort, MTele_Sort s0 n -&gt; s0, (forall (s0 : Sort) (T : MTele_Sort s0 n), MTele_val T -&gt; now_ty s0 T) -&gt; s).
+
+Let lift_inR {m} (U : UNCURRY m) (T : TyTree) :=
+  {F : InF SType m &amp; (to_ty T = F (now_ty U) (now_val U))}.
+</code></pre>
+
+<p>This <code>F</code> function is like the one seen before in <code>MTele_In</code>, so then it fits perfectly with <code>uncurry_in</code>.</p>
+
+<p>Whatever <code>T : TyTree</code> we pass to <code>lift_in</code> we will recieve a function <code>F (now_ty U) (now_val U)</code> that corresponds to the tree, where <code>U : UNCURRY m</code> is the one from <code>lift</code>.</p>
+
+<p>Here is the current implementation:</p>
+
+<pre><code>Definition lift_in {m : MTele} (U : UNCURRY m) (T : TyTree)
+                 (p l : bool) :
+                 M (lift_inR U T) :=
+  (mfix3 f (T : TyTree) (p l : bool) : M (lift_inR U T) :=
+    mmatch T as e return M (lift_inR U e) with
+    | [? (A : MTele_Ty m)] tyTree_base (RETURN A U) =&gt;
+      print "lift_in: base";;
+      let F : InF SType m := fun nty nval =&gt; nty SType A in
+      let eq_p : to_ty (tyTree_base (RETURN A U)) = F (now_ty U) (now_val U) := eq_refl in
+      ret (existT _ F eq_p)
+    | [? (A : MTele_Ty m)] tyTree_M (RETURN A U) =&gt;
+      print "lift_in: M";;
+      let F : InF SType m := fun nty nval =&gt; M (nty SType A) in
+      let eq_p : to_ty (tyTree_M (RETURN A U)) = F (now_ty U) (now_val U) := eq_refl in
+      ret (existT _ F eq_p)
+    | [? X Y] tyTree_imp X Y =&gt;
+      print "lift_in: imp";;
+      ''(existT _ FX pX) &lt;- f X (negb p) true;
+      ''(existT _ FY pY) &lt;- f Y p false;
+      let F : InF SType m := fun nty nval =&gt; (FX nty nval) -&gt; (FY nty nval) in
+      let eq_p : to_ty (tyTree_imp X Y) = F (now_ty U) (now_val U) :=
+        ltac:(simpl in *; rewrite pX, pY; refine eq_refl) in
+      ret (existT _ F eq_p)
+    | [? A] tyTree_base A =&gt;
+      print "lift_in: unlift_in";;
+      let F : InF SType m := fun nty nval =&gt; A in
+      ret (existT _ F (eq_refl))
+    | _ =&gt; raise UnLiftInCase
+    end) T p l.
+</code></pre>
+
+<p>The only recursion appears in the implication case. The <code>_</code> case means to match something strange we don’t expect. The good thing about this is that the exception can be handled and does not break the <em>lifting</em>.</p>
+
+<h2 id="the-m_check-function">The <em>m_check</em> function</h2>
+
+<p>This function is pretty simple as it only checks for a certain case, otherwise it returns <code>false</code>, meaning that the type <code>A</code> we passed to it is not found under the monad.</p>
+
+<pre><code>(* Checks if a given type A is found "under M" *)
+(* true iff A is "under M", false otherwise *)
+Definition m_check (T : TyTree) (A : Type) : M bool :=
+  print "m_check on T:";;
+  print_term T;;
+  (mfix1 f (T : TyTree) : M bool :=
+  mmatch T return M bool with
+  | [? X] tyTree_base X =&gt; ret false
+  | [? X] tyTree_M X =&gt;
+    mmatch X return M bool with
+    | A =&gt; ret true
+    | _ =&gt; ret false
+    end
+  | [? X Y] tyTree_imp X Y =&gt; fX &lt;- f X;
+                             fY &lt;- f Y;
+                             let r := orb fX fY in
+                             ret r
+  | [? F] tyTree_FAType F =&gt; print_term (F A);;
+                            \nu X : Type,
+                            f (F X)
+  | _ =&gt; ret false
+  end) T.
+</code></pre>
+
+<p>Knowing if the result is <code>false</code> or <code>true</code>, then <code>lift</code> knows wether to lift if or not. That is for example in the following case:</p>
+
+<pre><code>Let T : TyTree := tyTree_FAType (fun A =&gt; tyTree_FAType (fun B =&gt; tyTree_imp (tyTree_base A) (tyTree_M B))).
+</code></pre>
+<p>In this type the type <code>tyTree_base A</code> should remain the same after <code>lift</code> given the call to <code>m_check</code> returns <code>false</code>.</p>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/coq/mtac/2019/01/04/setting_up_environment_for_lift/">
+        Setting up the environment for `lift`
+      </a>
+    </h1>
+
+    <span class="post-date">04 Jan 2019</span>
+
+    <p>The final result is a function called <code>lift</code>. This function takes a telescope <code>m</code>, a type <code>T</code> and a function <code>t</code> of that type <code>T</code>, and <em>lifts</em> the function, meaning we get a new function with a more general type.</p>
+
+<p>The <code>lift</code> function needs a lot of stuff around it to work. Here I try to explain some of it.</p>
+
+<h2 id="the-tytree-type">The <em>TyTree</em> Type</h2>
+
+<p>We can’t expect to normally match on a <code>Type</code> because it’s not inductively defined. What we can do is create a reflection of it to be able to describe in an elegant fashion.</p>
+
+<pre><code>Inductive TyTree : Type :=
+| tyTree_M (T : Type) : TyTree
+| tyTree_MFA {m : MTele} (T : MTele_Ty m) : TyTree
+| tyTree_In (s : Sort) {m : MTele} (F : InF s m) : TyTree
+| tyTree_imp (T : TyTree) (R : TyTree) : TyTree
+| tyTree_FATele {m : MTele} (T : MTele_Ty m) (F : forall t : MTele_val T, TyTree) : TyTree
+| tyTree_FATele1 (m : MTele) (F : forall (T : MTele_Ty m), TyTree) : TyTree
+| tyTree_FA (T : Type) (F : T -&gt; TyTree) : TyTree
+| tyTree_FAType (F : Type -&gt; TyTree) : TyTree
+| tyTree_base (T : Type) : TyTree
+.
+</code></pre>
+
+<p>Let’s see some types written with <code>TyTree</code>:</p>
+
+<pre><code>Let R := tyTree_FAType (fun T : Type =&gt; (tyTree_FA T (fun t : T =&gt; tyTree_M T))).
+Let r : to_ty r := @ret.
+
+Let T : TyTree := tyTree_FAType (fun A =&gt; tyTree_imp (tyTree_base Exception) (tyTree_M A)).
+Let t : to_ty T := @raise'.
+</code></pre>
+
+<p>Here a function called <code>to_ty</code> is used to tranforms a <code>TyTree</code> to it’s corresponded <code>Type</code>. It’s really important that the return type of <code>to_ty</code> is just <code>Type</code> and not <code>M Type</code> because it allows the function to be used in the type of a function.</p>
+
+<pre><code>Fixpoint to_ty (X : TyTree) : Type :=
+  match X as X' with
+  | tyTree_M T =&gt; M T
+  | tyTree_MFA T =&gt; MFA T
+  | tyTree_In s F =&gt; MTele_val (MTele_In s F)
+  | tyTree_imp T R =&gt; to_ty T -&gt; to_ty R
+  | @tyTree_FATele m T F =&gt; forall T, to_ty (F T)
+  | tyTree_FATele1 m F =&gt; forall T : (MTele_Ty m), to_ty (F T) 
+  | tyTree_FA T F =&gt; forall t : T, to_ty (F t)
+  | tyTree_FAType F =&gt; forall T : Type, to_ty (F T)
+  | tyTree_base T =&gt; T
+  end.
+</code></pre>
+
+<p>There are a lot of constructors in <code>TyTree</code> so let’s see how some of correspond to each other.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Normal</th>
+      <th>Lifted</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>tyTree_M (T : Type)</code></td>
+      <td><code>tyTree_MFA {m : MTele} (T : MTele_Ty m)</code></td>
+    </tr>
+    <tr>
+      <td><code>tyTree_FAType (F : Type -&gt; TyTree)</code></td>
+      <td><code>tyTree_FATele1 (m : MTele) (F : MTele_Ty m -&gt; TyTree)</code></td>
+    </tr>
+    <tr>
+      <td><code>tyTree_FA (T : Type) (F : T -&gt; TyTree)</code></td>
+      <td><code>tyTree_FATele {m : MTele} (T : MTele_Ty m) (F : MTele_val T -&gt; TyTree)</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The ones that don’t correspond to another one are the more interesting ones:</p>
+
+<ul>
+  <li><code>tyTree_base</code>: this constructor is used for types that are not under the monad and that express a value of that type. For example <code>5 : nat</code> and <code>5 : to_ty (tyTree_base nat)</code> are both true.</li>
+  <li><code>tyTree_imp</code>: this constructor represents implications where the left and right are not dependant. The function that sums <code>1</code> to any number could have the type <code>sum : tyTree_imp (tyTree_base nat) (tyTree_base nat)</code>.</li>
+  <li><code>tyTree_In</code> is more complicated because it will only be used in the final type that is returnes and not in a normal function. It will be explained better in the future, but for now it’s the constructor that will allow us to use <code>MTele_In</code> like it was done in <code>mbind</code>.</li>
+</ul>
+
+<h2 id="the-checker-function">The <code>checker</code> function</h2>
+
+<p>The following function is used as a restriction on the domain of <code>lift</code>.</p>
+
+<pre><code>Fixpoint checker (pol : bool) (l : bool) (X : TyTree) : P
+</code></pre>
+
+<p>The proposition that is returned can then be proved or not. If it cannot be proved it means that the type of interest is not <em>liftable</em>. The actual proof that this types are <em>unliftable</em> is not yet on paper.</p>
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/coq/mtac/2018/11/12/returning_a_lifted_type/">
+        Returning a lifted function type
       </a>
     </h1>
 
     <span class="post-date">12 Nov 2018</span>
 
-    <p>In the previous post I explained a possible implementation of <code>mbind</code> which had type:</p>
+    <p>The main goal of all of this is to be able to adapt a function to telescopes automatically. The first step in this is to be able to get the type of this of this function. To clarify let’s use an example:</p>
 
-<pre><code class="language-Coq">Fixpoint mbind {m : MTele} {A : Type} : forall {B : MTele_Ty m}, M A -&gt; (A -&gt; MFA B) -&gt; MFA B.
+<pre><code>ret : forall A : Type, A -&gt; M A
 </code></pre>
 
-<p>Now it’s in our interest to change this a little bit.</p>
+<p>Now we have already seen what <code>mret</code> looks like:</p>
 
-<p>Roughly, the type of <code>mBind</code> we’re now interested:</p>
-
-<pre><code>Fixpoint mbind {m : MTele} : forall {A B : MTele_Ty m}, MFA A -&gt; forall x .. z, (A -&gt; M B) -&gt; MFA B.
+<pre><code>mret: forall (m : MTele) (A : MTele_Ty m), MTele_val A -&gt; MFA A
 </code></pre>
 
-<p>To do this a new function is needed.</p>
+<p>The interesting part would be being able to guess the <em>lifted</em> type of the function. To do this I coded a function called <code>liftT</code>. We will go through it by parts.</p>
 
-<pre><code class="language-Coq">Fixpoint MTele_In (s : Sort) {n : MTele} :
-  (forall (now_ty : forall s, MTele_Sort s n -&gt; s)
-          (now_val : forall s {T : MTele_Sort s n}, MTele_val T -&gt; now_ty s T), s)
-  -&gt; MTele_Sort s n.
-</code></pre>
+<h2 id="the-liftt-function">The <em>liftT</em> function</h2>
 
-<p>It’s not the nicest looking types but it’s fairly simple. First, let’s inspect the type and then what the function does.</p>
+<p>Before starting, notice that this function is not the final result of my research, it’s just a preliminary step into the types. The final result involves also lifting the actual function.</p>
 
-<p><code>MTele_in</code> takes <code>s : Sort</code>, <code>m :MTele</code> and then quantifies over two functions: <code>now_ty</code> and <code>now_val</code>. The idea behind this function is to able to work with various telecosped types at the same time. In the previous version on <code>mbind</code>, the <code>A</code> was just a plain coq type so we didn’t need this function. We’re not interested in <code>now_val</code> for what we’re doing so I’ll just ignore it.</p>
+<p>The <code>liftT</code> function takes a type (the one from the function we’re interested) and a telescope, and it returns a value of <code>M Type</code>. The telescope is the one that indicated what arguments we want to <em>add</em>. I use a function called <code>repl</code> which I’ll explain in the examples up next.</p>
 
-<p>The function <code>now_ty : forall s, MTele_Sort s n -&gt; s</code> let’s us access telescoped types as if they were regular Coq types. So what we’re interested in doing is taking our <code>A</code> and <code>B</code> which are <code>MTele_Ty</code> and be able to write <code>A -&gt; M B</code>. And that’s we will describe in the signature of the new <code>mbind</code>.</p>
-
-<pre><code class="language-Coq">Fixpoint mbind {m : MTele} : forall {A B : MTele_Ty m},
-                              MFA A -&gt;
-                              (MTele_val [withP now_ty , _ =&gt;
-                                let A' := now_ty SType A in
-                                let B' := now_ty SType B in
-                                (A' -&gt; M B')]) -&gt;
-                              MFA B :=
-  match m with
-  | mBase =&gt; fun A B ma f =&gt; @bind A B ma f
-  | @mTele X F =&gt; fun A B ma f x =&gt; @mbind (F x) (A x) (B x) (ma x) (f x)
-  end.
-</code></pre>
-
-<p>Now, the <code>f</code> function we are left with looks like <code>forall x..z, (A x..z -&gt; M (B x..z))</code>, so we can use the same approach as before by just adding a variable from the telescope with each step.</p>
-
-<p>Later we will see why we can’t use this approach to write some functions, for example <code>fix0</code> which would make a fixpoint with no arguments.</p>
-
-
-  </div>
-  
-  <div class="post">
-    <h1 class="post-title">
-      <a href="/coq/mtac/2018/11/09/bind-in-mtac/">
-        Implementing a new bind for Mtac2 with telescopes
-      </a>
-    </h1>
-
-    <span class="post-date">09 Nov 2018</span>
-
-    <p>Because <em>Mtac2</em> uses monads there is a <code>bind</code> function that has a type</p>
-
-<pre><code class="language-Coq">bind : forall {A : Type} {B : Type}, M A -&gt; (A -&gt; M B) -&gt; M B.
-</code></pre>
-
-<p>The <code>bind</code> operator is used to concatenate different computations. So given <code>M A</code>, which means we have a proof of <code>A</code> wrapped in our monad, we want to use this proof of <code>A</code> to continue to proof <code>M B</code>, and so it returns <code>M B</code>.</p>
-
-<p>The <em>problem</em> that arises from this definition is that this type <em>B</em> can depend on other types but they have to be already introduced to <em>B</em>. For example we can’t do the following:</p>
-
-<pre><code class="language-Coq">mfix  f a : forall x .. z, M (B x .. z) :=
-  a' &lt;- g a;
-  mmatch a' as a' return forall x .. z, M (B' a' x .. z)
-</code></pre>
-<p>Here <code>bind</code> is hidden, but it would be something like this</p>
-
-<pre><code class="language-Coq">bind (g a) (fun a' =&gt; mmatch a' ...)
-</code></pre>
-
-<p>So the type of <code>fun a' =&gt; mmatch a' ...</code> is <code>forall a' x .. z, M (B' a' x .. z)</code> which doesn’t match with the type bind is expecting.</p>
-
-<p>The idea is to migrate this to something like</p>
-
-<pre><code class="language-Coq">mbind : forall {A : Type} {B : X .. Z -&gt; Type}, M A -&gt; (A -&gt; forall x .. z M (B x .. z)) -&gt; M (B x .. z).
-</code></pre>
-
-<p>The way I did this is by using <em>telescopes</em>, or at least that’s what we call them. <em>Telescopes</em> are actually values of a type <code>MTele</code>, which is unductively defined as:</p>
-
-<pre><code class="language-Coq">Inductive MTele : Type :=
-| mBase : MTele
-| mTele {X : Type} (F : X -&gt; MTele) : MTele
-.
-</code></pre>
-
-<p>By using this type we can express an arbitrary amount of values of different types. For example <code>@mTele nat (fun _ =&gt; @mTele bool (fun _ =&gt; mBase))</code> describes something that needs a natural number and a boolean value. With a telescope and a set of functions we can express this types we’re looking for. In this case, we’re interested in the following notation to write the type of <code>mbind</code>:</p>
-
-<pre><code class="language-Coq">Local Notation MFA T := (MTele_val (MTele_C SType SProp M T)).
-mbind {A : Type} {m : MTele} : forall {B : MTele_Ty m}, M A -&gt; (A -&gt; MFA B) -&gt; MFA B.
-</code></pre>
-
-<p><em>Telescopes</em> work at three levels:</p>
-
-<table>
-  <thead>
-    <tr>
-      <th>Syntax</th>
-      <th>Type</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>Let m := @mTele nat (fun _ : nat =&gt; mBase)</code></td>
-      <td><code>m : MTele</code></td>
-    </tr>
-    <tr>
-      <td><code>Let A : MTele_Sort SProp m := fun x =&gt; x = x.</code></td>
-      <td><code>A : nat -&gt; Type</code></td>
-    </tr>
-    <tr>
-      <td><code>Let a : MTele_val (MTele_C SProp SProp M A) := ...</code></td>
-      <td><code>a : forall x : nat, M (C x)</code></td>
-    </tr>
-  </tbody>
-</table>
-
-<p>At the first level (top) we see the definition of a telescope that takes only a natural number. We use <code>_</code> because we don’t actually care about the value we take. Now <code>m</code> has type <code>MTele</code>.</p>
-
-<p><code>A</code> has type <code>MTele_Sort SProp m</code>. This means that <code>A</code> is a <code>Prop</code> that takes a <code>nat</code>. <code>SProp</code> is a constructor of <code>Sort</code> which coerces with <code>Prop</code>. <code>Sort</code> means to describe what sort of object we want to produce out of the telescope: it can be a type or a proposition. In this case we’re interested in <code>SProp</code> because of how <code>A</code> is defined.</p>
-
-<p>It’s important to notice that an inhabitant of <code>A</code> would be a proof of the proposition that it represents. That’s what <code>a</code> attempts to be. Through those two functions: <code>MTele_val</code> and <code>MTele_C</code> we can describe the type of an inhabitant of <code>A</code>:</p>
+<p>The idea is just to match the type with certain situations that are important. I’ll cover some cases next:</p>
 <ul>
-  <li><code>MTele_val</code> computes <code>λ x .. z, T x .. z</code> from <code>T : MTele_Sort s n</code>.</li>
-  <li><code>MTele_C</code> maps an <code>MTele_Sort s m</code> with a constant function, in this case <code>M</code>.</li>
+  <li><code>[? m A] @repl m SType A</code>: in this case we receive something with <code>repl</code>. We use this function to denote that the element should be swapped by some telescop-based-value. In this case we replace it with an <code>MTele_val A</code>.</li>
+  <li><code>[? (V : forall X : Type, Type)] (forall X : Type, V X)</code>: we found some <code>V</code> that’s wrapped in a forall over a type <code>X</code>. In this case we use <code>\nu</code> to create a value of type <code>MTele_Ty m</code> which we will use to momentarily replace <code>X</code>. Then we recurse on <code>V X</code> (still using <code>repl</code>) and finally we abstract <code>X</code>. The same principle is used in the two cases below.</li>
+  <li><code>[? A B] A -&gt; B</code>: the implication case is where things get a little bit more complicated. Remember that in the type of <code>mbind</code> the function was using <code>MTele_In</code>. To actually be able to compute a type of that kind more information is needed. I used the concept of polarity. When we get to the implication, the left side is negative and the right side is positive. If it’s negative <code>lift_neg</code> is called.</li>
 </ul>
 
-<p>This is the implentation of <code>mbind</code>:</p>
+<pre><code>Polymorphic Definition liftT (A : Type) (m : MTele) : M Type :=
+  (mfix1 f (A : Type) : M Type :=
+    M.print_term A;;
+    mmatch A in Type as A' return M Type with
+    | [? m A] @repl m SType A =&gt;
+        M.print "Case: repl A";;
+        ret (MTele_val A)
+    | [? A] (M (@repl m SType A)):Type =&gt;
+        M.print "Case: M (repl A)";;
+        ret ((MFA A):Type)
+    | [? A] (M A):Type =&gt;
+        M.print "Case: M A";;
+        ret (MTele_ConstT A m)
+    | [? A B] A -&gt; B =&gt;
+        M.print "Case: implication";;
+        A' &lt;- lift_neg A m;
+        B' &lt;- f B;
+        ret (A' -&gt; B')
+    | [? (V : forall X : Type, Type)] (forall X : Type, V X) =&gt;
+        M.print "Case: forall1 type";;
+        \nu_f for A as X : MTele_Ty m,
+            v &lt;- f (V (@repl m SType X));
+            abs_prod_type X v
+    | [? (V : forall X : Type, Prop)] (forall X : Type, V X):Type =&gt;
+        M.print "Case: forall1 prop";;
+        \nu_f for A as X : MTele_Ty m,
+            let x := reduce (RedOneStep [rl:RedBeta]) (V (@repl m SType X)) in
+            v &lt;- f (x);
+            abs_prod_type X v
+    | [? T (V : forall x : T, Type)] (forall t : T, V t) =&gt;
+        M.print "Case: forall2";;
+        \nu_f for A as t : T,
+            v1 &lt;- f (V t);
+            abs_prod_type t v1
+    | [? m V A] (V (@repl m SType A)) =&gt;
+        M.failwith "Unused replace"
+    | _ =&gt;
+        ret (A)
+    end) A.
 
-<pre><code class="language-Coq">Fixpoint mbind {m : MTele} {A : Type} : forall {B : MTele_Ty m}, M A -&gt; (A -&gt; MFA B) -&gt; MFA B :=
-  match m with
-  | mBase =&gt; fun B ma f =&gt; @bind A B ma f
-  | @mTele X F =&gt; fun B ma f x =&gt; @mbind (F x) A (B x) ma (fun a =&gt; f a x)
-  end.
+Polymorphic Definition liftT' {A} (a : A) (m : MTele) := lift A m.
 </code></pre>
 
-<p>The way this works is by induction on the telescope. When the telescope is <code>mBase</code> we just use the regular <code>bind</code>, because we don’t have any kind of argument of any type that we want to “add” to <code>B</code>.</p>
+<p>Next up, <code>lift_neg</code>.</p>
 
-<p>When the telescope is <code>@mTele X F</code> we just peel one layer of the telescope by each recursive step. Notice the last argument of <code>mbind</code>, the function, uses the original <code>f</code> but it adds a value <code>x</code> of type <code>X</code>. If <code>m</code> is a long telescope: <code>m := [tele T1 T2 ... Tn]</code> this function will grow with each step finally approaching something like <code>fun a =&gt; f a t1 t2 .. tn</code>, where <code>t1 : T1</code>, <code>t2 : T2</code> … <code>tn : Tn</code>.</p>
+<h3 id="treating-negative-parts">Treating negative parts</h3>
+
+<p>The <code>lift_neg</code> function assumes the type <code>A</code> is in a negative position. The other function, <code>lift_neg'</code> is given the two functions that <code>MTele_In</code> so then <code>lift_neg</code> return an <code>MTele_val (MTele_In ...)</code>.</p>
+
+<pre><code>Polymorphic Program Definition lift_neg' (A : Type) (m : MTele)
+(now_ty : forall (s : Sort), MTele_Sort s m -&gt; s)
+(_ : forall (s: Sort) (T : MTele_Sort s m), MTele_val T -&gt; now_ty s T) : M Type :=
+    (mfix1 f (A : Type) :
+    M Type :=
+        mmatch A in Type as A' return
+        M Type with
+        | [? A] @repl m SType A =&gt;
+            ret (now_ty SType A)
+        | [? (A : MTele_Sort SType m)] (M (@repl m SType A)):Type =&gt;
+            ret (let A' := now_ty SType A in
+                (M A'):Type)
+        | [? A B] A -&gt; B =&gt;
+            A' &lt;- f A;
+            B' &lt;- f B;
+            ret (A' -&gt; B')
+        | _ =&gt; ret (A)
+        end) A.
+
+Polymorphic Definition lift_neg (A : Type) (m : MTele) : M Type :=
+    \nu now_ty : forall (s : Sort), MTele_Sort s m -&gt; s,
+      \nu now_val : _,
+        F &lt;- lift_neg' A m now_ty now_val;
+        let F := F:(SType) in
+        F &lt;- abs_fun (A := forall (s: Sort) (T : MTele_Sort s m), MTele_val T -&gt; now_ty s T) (P := fun now_val =&gt; SType) now_val F;
+        F &lt;- abs_fun (A := forall (s : Sort), MTele_Sort s m -&gt; s) (P := fun now_ty =&gt; (forall (s: Sort) (T : MTele_Sort s m), MTele_val T -&gt; now_ty s T) -&gt; SType) now_ty F;
+        ret (MTele_val (@MTele_In SType m F)).
+</code></pre>
+
 
   </div>
   
   <div class="post">
     <h1 class="post-title">
-      <a href="/misc/coq/2017/11/26/coq-in-spacemacs/">
-        Installing Coq for Spacemacs
+      <a href="/coq/mtac/2018/11/12/implementing-mret-with-curry/">
+        Implementing mret with curry/uncurry functions
       </a>
     </h1>
 
-    <span class="post-date">26 Nov 2017</span>
+    <span class="post-date">12 Nov 2018</span>
 
-    <p>I had a very hard time getting Coq to work as expected on Spacemacs. I collected everything I found and made this little tutorial.</p>
+    <p>One of the simplest primitives of <em>Mtac2</em> is <code>ret : forall A : Type, A -&gt; M A</code>. Implementing it in the same way as <code>mbind</code> it’s not hard. Both functions stick to a pattern at the time of “translating” them.</p>
 
-<p>First of all we need to install <strong>Coq</strong>, though <strong>Opam</strong>. Debian-based users can do this with <code>apt-get</code>.</p>
+<p>The type will change to this: <code>mret : forall (m : MTele) (A : MTele_Ty), MTele_val A -&gt; MFA A</code>. Notice that because now <code>A</code> is an <code>MTele_Ty</code>, any appereance of <code>A</code> is replaced by <code>A : MTele_val m</code> and any <code>M A</code> replaced by <code>MFA A</code>. The implementation looks similar to the one of <code>mbind</code>:</p>
 
-<pre><code>sudo apt-get install opam
-opam install coq
+<pre><code class="language-Coq">  Fixpoint mret {m : MTele} : forall {A : MTele_Ty m}, MTele_val A -&gt; MFA A :=
+    match m with
+    | mBase =&gt; fun A ma =&gt; @ret A ma
+    | @mTele X F =&gt; fun A ma x =&gt; @mret (F x) (A x) (ma x)
+    end.
 </code></pre>
 
-<p>In fedora:</p>
+<h3 id="another-way">Another way</h3>
 
-<pre><code>sudo yum install opam.x86_64
-opam install coq
+<p>In <code>Mtac2/theories/meta/MFixDef.v</code> we can find a function called <code>mfix'</code> and other functions that are used to define <code>mfix'</code>. This way of implementing functions is based on the curryfication and uncurryfication of a function that takes some value of a telescope-derived type. With this “technique” we can define a telescope version of <em>fixpoints</em>, allowing us to take an arbitrary amount of elements. But with the previous method we cannot define <code>mfix'</code>.</p>
+
+<p>Probably in a future blog the matter of what can be done (or maybe what cannot be done) with the previous method will be discussed. For now, the focus is on reimplementing functions that work with the original method.</p>
+
+<p>The implementation is the following:</p>
+
+<pre><code>Definition mret {m : MTele} : forall {A : MTele_Ty m}, MTele_val A -&gt; MFA A :=
+  fun A mv_a =&gt; curry (fun U : UNCURRY m =&gt;
+                     let mv_a := (uncurry_val mv_a) in
+                     ret (mv_a U)).
 </code></pre>
 
-<p>The next step is getting <strong>Proof General</strong>. <a href="https://proofgeneral.github.io/">Proof General</a> is a generic front-end for <em>proof assistants</em> based on Emacs.</p>
-
-<pre><code>git clone https://github.com/ProofGeneral/PG ~/.emacs.d/lisp/PG
-cd ~/.emacs.d/lisp/PG
-make
-</code></pre>
-
-<p>And add this to you dotfile in <code>dotspacemacs/user-init</code>. This is done with <code>SPC f e d</code> in <strong>Evil mode</strong>.</p>
-
-<pre><code>(load "~/.emacs.d/lisp/PG/generic/proof-site")
-</code></pre>
-
-<p>The next step is installing <strong>company-coq</strong> with <strong>MELPA</strong>. Luckily, MELPA comes with the default Spacemacs installation. Just use <code>M-x package-refresh-contents RET</code> followed by <code>M-x package-install RET company-coq RET</code> to install and byte-compile company-coq and its dependencies (some of them will produce a few warnings; that’s OK).</p>
-
-<p>Next, we have to download a <a href="https://github.com/olivierverdier/spacemacs-coq">Coq layer</a> for Spacemacs. This will provide all the keybindings and configurations we need to start working.</p>
-
-<p>Before dowloading the layer we need to change the <code>dotspacemacs-configuration-layer-path</code> in our <code>.spacemacs</code> dotfile. Find that line and change it to this:</p>
-
-<pre><code>dotspacemacs-configuration-layer-path '("~/.spacemacs.d/")
-</code></pre>
-
-<p>This informs Spacemacs that we will keep our configuration layers in this folder, so then Spacemacs knows how to reach them. Now we need to create the directory and clone the layer.</p>
-
-<pre><code>mkdir ~/.spacemacs.d
-mkdir ~/.spacemacs.d/layers
-cd ~/.spacemacs.d/layers
-git clone https://github.com/olivierverdier/spacemacs-coq.git
-mv spacemacs-coq coq
-</code></pre>
-
-<p>Now add <code>coq</code> to your <code>dotspacemacs-configuration-layers</code>.</p>
-
-<p>We’re almost finished. Let’s go to the location of the layer we’ve just downloaded and open <code>config.el</code>. We need to change the <code>proof-general-path</code>:</p>
-
-<pre><code>(defvar proof-general-path "~/.emacs.d/lisp/PG/generic/proof-site"
-  "The path to proof general")
-</code></pre>
-
-<p>Finally, the last step (totally optional) will serve <strong>Evil</strong> users. If this is not configured, everytime you hit <code>&lt;ESC&gt;</code>, Emacs will autocomplete the current line.</p>
-
-<pre><code>(setq evil-want-abbrev-expand-on-insert-exit nil)
-</code></pre>
-
-<p>This should be added before Evil loads, that means, before <code>dotspacemacs/user-init</code> in your <code>.spacemacs</code> file. This was found <a href="https://github.com/syl20bnr/spacemacs/issues/8853">here</a>.</p>
-
-<p>Hopefully, you’ve installed Coq in Spacemacs. In case you’re curious there’s a tutorial included with <strong>Company Coq</strong>.</p>
-
-<pre><code>M-x company-coq-tutorial 
-</code></pre>
-
+<p><code>A : MTele_Ty</code> and <code>mv_a : MTele_val A</code> are introduced. Because we want to use <code>ret</code> we need to provide a value without the telescopes. The function <code>uncurry_val</code> is able to do this. It’s similar to <code>uncurry</code> but instead speaks of a value that is not inside the monad. And because we need to uncurry this value we need some element of type <code>UNCURRY m</code>. The way of doing this is to use <code>curry</code> which then allows us to introduce <code>U</code>. Because <code>mv_a</code> is now an uncurried value, when we pass it to <code>ret</code> we recieve an uncurried value in the monad, so using <code>curry</code> makes perfect sense.</p>
 
   </div>
   
@@ -316,7 +440,7 @@ mv spacemacs-coq coq
 
 <div class="pagination">
   
-    <span class="pagination-item older">Older</span>
+    <a class="pagination-item older" href="/page2">Older</a>
   
   
     <span class="pagination-item newer">Newer</span>

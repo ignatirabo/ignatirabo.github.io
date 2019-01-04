@@ -11,7 +11,7 @@
 
   <title>
     
-      Using the MTele_In function &middot; Ignacio
+      Implementing mret with curry/uncurry functions &middot; Ignacio
     
   </title>
 
@@ -86,52 +86,35 @@
 
     <div class="content container">
       <div class="post">
-  <h1 class="post-title">Using the MTele_In function</h1>
+  <h1 class="post-title">Implementing mret with curry/uncurry functions</h1>
   <span class="post-date">12 Nov 2018</span>
   <span class="post-edit"></span>
-  <p>In the previous post I explained a possible implementation of <code>mbind</code> which had type:</p>
+  <p>One of the simplest primitives of <em>Mtac2</em> is <code>ret : forall A : Type, A -&gt; M A</code>. Implementing it in the same way as <code>mbind</code> it’s not hard. Both functions stick to a pattern at the time of “translating” them.</p>
 
-<pre><code class="language-Coq">Fixpoint mbind {m : MTele} {A : Type} : forall {B : MTele_Ty m}, M A -&gt; (A -&gt; MFA B) -&gt; MFA B.
+<p>The type will change to this: <code>mret : forall (m : MTele) (A : MTele_Ty), MTele_val A -&gt; MFA A</code>. Notice that because now <code>A</code> is an <code>MTele_Ty</code>, any appereance of <code>A</code> is replaced by <code>A : MTele_val m</code> and any <code>M A</code> replaced by <code>MFA A</code>. The implementation looks similar to the one of <code>mbind</code>:</p>
+
+<pre><code class="language-Coq">  Fixpoint mret {m : MTele} : forall {A : MTele_Ty m}, MTele_val A -&gt; MFA A :=
+    match m with
+    | mBase =&gt; fun A ma =&gt; @ret A ma
+    | @mTele X F =&gt; fun A ma x =&gt; @mret (F x) (A x) (ma x)
+    end.
 </code></pre>
 
-<p>Now it’s in our interest to change this a little bit.</p>
+<h3 id="another-way">Another way</h3>
 
-<p>Roughly, the type of <code>mBind</code> we’re now interested:</p>
+<p>In <code>Mtac2/theories/meta/MFixDef.v</code> we can find a function called <code>mfix'</code> and other functions that are used to define <code>mfix'</code>. This way of implementing functions is based on the curryfication and uncurryfication of a function that takes some value of a telescope-derived type. With this “technique” we can define a telescope version of <em>fixpoints</em>, allowing us to take an arbitrary amount of elements. But with the previous method we cannot define <code>mfix'</code>.</p>
 
-<pre><code>Fixpoint mbind {m : MTele} : forall {A B : MTele_Ty m}, MFA A -&gt; forall x .. z, (A -&gt; M B) -&gt; MFA B.
+<p>Probably in a future blog the matter of what can be done (or maybe what cannot be done) with the previous method will be discussed. For now, the focus is on reimplementing functions that work with the original method.</p>
+
+<p>The implementation is the following:</p>
+
+<pre><code>Definition mret {m : MTele} : forall {A : MTele_Ty m}, MTele_val A -&gt; MFA A :=
+  fun A mv_a =&gt; curry (fun U : UNCURRY m =&gt;
+                     let mv_a := (uncurry_val mv_a) in
+                     ret (mv_a U)).
 </code></pre>
 
-<p>To do this a new function is needed.</p>
-
-<pre><code class="language-Coq">Fixpoint MTele_In (s : Sort) {n : MTele} :
-  (forall (now_ty : forall s, MTele_Sort s n -&gt; s)
-          (now_val : forall s {T : MTele_Sort s n}, MTele_val T -&gt; now_ty s T), s)
-  -&gt; MTele_Sort s n.
-</code></pre>
-
-<p>It’s not the nicest looking types but it’s fairly simple. First, let’s inspect the type and then what the function does.</p>
-
-<p><code>MTele_in</code> takes <code>s : Sort</code>, <code>m :MTele</code> and then quantifies over two functions: <code>now_ty</code> and <code>now_val</code>. The idea behind this function is to able to work with various telecosped types at the same time. In the previous version on <code>mbind</code>, the <code>A</code> was just a plain coq type so we didn’t need this function. We’re not interested in <code>now_val</code> for what we’re doing so I’ll just ignore it.</p>
-
-<p>The function <code>now_ty : forall s, MTele_Sort s n -&gt; s</code> let’s us access telescoped types as if they were regular Coq types. So what we’re interested in doing is taking our <code>A</code> and <code>B</code> which are <code>MTele_Ty</code> and be able to write <code>A -&gt; M B</code>. And that’s we will describe in the signature of the new <code>mbind</code>.</p>
-
-<pre><code class="language-Coq">Fixpoint mbind {m : MTele} : forall {A B : MTele_Ty m},
-                              MFA A -&gt;
-                              (MTele_val [withP now_ty , _ =&gt;
-                                let A' := now_ty SType A in
-                                let B' := now_ty SType B in
-                                (A' -&gt; M B')]) -&gt;
-                              MFA B :=
-  match m with
-  | mBase =&gt; fun A B ma f =&gt; @bind A B ma f
-  | @mTele X F =&gt; fun A B ma f x =&gt; @mbind (F x) (A x) (B x) (ma x) (f x)
-  end.
-</code></pre>
-
-<p>Now, the <code>f</code> function we are left with looks like <code>forall x..z, (A x..z -&gt; M (B x..z))</code>, so we can use the same approach as before by just adding a variable from the telescope with each step.</p>
-
-<p>Later we will see why we can’t use this approach to write some functions, for example <code>fix0</code> which would make a fixpoint with no arguments.</p>
-
+<p><code>A : MTele_Ty</code> and <code>mv_a : MTele_val A</code> are introduced. Because we want to use <code>ret</code> we need to provide a value without the telescopes. The function <code>uncurry_val</code> is able to do this. It’s similar to <code>uncurry</code> but instead speaks of a value that is not inside the monad. And because we need to uncurry this value we need some element of type <code>UNCURRY m</code>. The way of doing this is to use <code>curry</code> which then allows us to introduce <code>U</code>. Because <code>mv_a</code> is now an uncurried value, when we pass it to <code>ret</code> we recieve an uncurried value in the monad, so using <code>curry</code> makes perfect sense.</p>
 
 </div>
 
